@@ -8,6 +8,7 @@ const song: Song = {
   bpm: 90,
   beats: 4,
   pattern: "block",
+  rhythm: "eightBeat",
   loop: true,
   updatedAt: "2026-09-26",
   sections: [
@@ -22,6 +23,7 @@ const song: Song = {
           chord: invert(diatonic({ tonic: "C", mode: "major" })[0], 1),
         },
       ],
+      melody: [{ id: "m", note: 72, startBeat: 0.5, durationBeats: 1 }],
     },
   ],
 };
@@ -32,6 +34,7 @@ describe("保存と書き出し", () => {
     expect(validSong(null)).toBe(false);
     expect(validSong({ ...song, bpm: 0 })).toBe(false);
     expect(validSong({ ...song, sections: [] })).toBe(false);
+    expect(validSong({ ...song, rhythm: "shuffle" })).toBe(false);
     expect(
       validSong({
         ...song,
@@ -39,6 +42,17 @@ describe("保存と書き出し", () => {
           {
             ...song.sections[0],
             chords: [{ ...song.sections[0].chords[0], beats: 5 }],
+          },
+        ],
+      }),
+    ).toBe(false);
+    expect(
+      validSong({
+        ...song,
+        sections: [
+          {
+            ...song.sections[0],
+            melody: [{ id: "bad", note: 128, startBeat: 0, durationBeats: 1 }],
           },
         ],
       }),

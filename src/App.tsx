@@ -32,7 +32,15 @@ import {
   Volume2,
   X,
 } from "lucide-react";
-import type { Chord, Key, Mood, Quality, Section, Song } from "./music/types";
+import type {
+  Chord,
+  Key,
+  MelodyNote,
+  Mood,
+  Quality,
+  Section,
+  Song,
+} from "./music/types";
 import {
   borrowed,
   chordName,
@@ -60,6 +68,7 @@ import { functionClass, functionShort } from "./music/functions";
 import { connectionChord } from "./music/modulation";
 import { Modal } from "./components/Modal";
 import { Connections, Modulation } from "./components/Connections";
+import { MelodyEditor } from "./components/MelodyEditor";
 
 type View = "compose" | "connect" | "modulate" | "presets";
 type Dialog =
@@ -290,6 +299,9 @@ export default function App() {
       ),
     });
   }
+  function updateMelody(melody: MelodyNote[]) {
+    updateSection({ ...section, melody });
+  }
   function moveChord(id: string, to: number) {
     const index = section.chords.findIndex((e) => e.id === id);
     if (index < 0 || to < 0 || to >= section.chords.length || index === to)
@@ -304,29 +316,36 @@ export default function App() {
       audio().pause();
       return;
     }
-    const items =
+    const playbackItems =
       scope === "song"
-        ? song.sections.flatMap((s) => s.chords)
-        : section.chords;
-    if (!items.length) {
+        ? song.sections.flatMap((s) =>
+            s.chords.map((item) => ({ item, sectionId: s.id })),
+          )
+        : section.chords.map((item) => ({ item, sectionId: section.id }));
+    if (!playbackItems.length) {
       notify("まずコードを追加してください");
       return;
     }
     setAudioLoading(true);
     try {
-      if (playState !== "paused") audio().stop();
+      if (playState !== "paused") audio().prepare();
       audio().setVolume(volume);
-      await audio().play(
-        items.map((e) => e.chord),
+      await audio().playSequence(
+        createSongPlaybackEvents(scope === "song" ? song.sections : [section], {
+          beats: song.beats,
+          pattern: song.pattern,
+          rhythm: song.rhythm ?? "off",
+          velocity: sound.settings.velocity,
+        }),
         song.bpm,
-        song.beats,
-        song.pattern,
         song.loop,
         (index, state) => {
+          const current = playbackItems[index];
           setPlayState(state);
-          setPlayingId(items[index]?.id ?? null);
+          setPlayingId(current?.item.id ?? null);
+          if (scope === "song" && current && state !== "stopped")
+            setSectionId(current.sectionId);
         },
-        items.map((item) => item.beats ?? song.beats),
       );
     } catch (error) {
       notify(
@@ -393,6 +412,10 @@ export default function App() {
     [selected, section.key, seventh, category, mood],
   );
   const totalChords = song.sections.reduce((n, s) => n + s.chords.length, 0);
+  const sectionBeats = section.chords.reduce(
+    (total, item) => total + (item.beats ?? song.beats),
+    0,
+  );
   const bassLine = section.chords.map((e) => pretty(e.chord.bassNote));
   const transition =
     selectedIndex > 0 && selected
@@ -413,6 +436,7 @@ export default function App() {
         name,
         key: { ...section.key },
         chords: [],
+        melody: [],
       };
       updateSong({ ...song, sections: [...song.sections, next] });
       setSectionId(next.id);
@@ -425,6 +449,7 @@ export default function App() {
       id: uid(),
       name: `転調 · ${pretty(keyName(key))}`,
       key,
+      melody: [],
       chords: chords.map((c) =>
         entry(connectionChord(c, section.key, key), "modulation", song.beats),
       ),
@@ -479,6 +504,10 @@ export default function App() {
       return {
         ...s,
         key,
+        melody: s.melody?.map((note) => ({
+          ...note,
+          note: Math.max(0, Math.min(127, note.note + shift)),
+        })),
         chords: s.chords.map((e) => ({
           ...e,
           chord: transpose(e.chord, s.key, key),
@@ -788,11 +817,7 @@ export default function App() {
               <span>
                 {pretty(keyName(section.key))}
                 <i /> {section.chords.length} chords <i /> 合計
-                {section.chords.reduce(
-                  (total, item) => total + (item.beats ?? song.beats),
-                  0,
-                )}
-                拍
+                {sectionBeats}拍
               </span>
               <button
                 className={`text-button ${editMode === "replace" ? "accent-text" : ""}`}
@@ -925,6 +950,12 @@ export default function App() {
                 </button>
               </div>
             )}
+            <MelodyEditor
+              key={section.id}
+              notes={section.melody ?? []}
+              totalBeats={sectionBeats}
+              onChange={updateMelody}
+            />
             <div className="bass-line">
               <AudioLines size={15} />
               <span>BASS</span>
@@ -1259,6 +1290,23 @@ export default function App() {
             <option value="block">Block Chord</option>
             <option value="arpeggio">Arpeggio</option>
           </select>
+          <select
+            className="rhythm-select"
+            aria-label="メトロノーム・ドラムパターン"
+            value={song.rhythm ?? "off"}
+            onChange={(e) =>
+              updateSong({
+                ...song,
+                rhythm: e.target.value as NonNullable<Song["rhythm"]>,
+              })
+            }
+          >
+            <option value="off">Rhythm Off</option>
+            <option value="metronome">Metronome</option>
+            <option value="twoBeat">Drums · 2 Beat</option>
+            <option value="fourBeat">Drums · 4 Beat</option>
+            <option value="eightBeat">Drums · 8 Beat</option>
+          </select>
         </div>
         <div className="transport-extra">
           <button
@@ -1402,7 +1450,7 @@ export default function App() {
           <div className="midi-export">
             <h3>MIDIでDAWへ</h3>
             <p className="micro-copy">
-              現在のテンポ・転回形・奏法で書き出します。ループは1周分、拍子は4/4、分解能は480
+              コード進行を「Chords」、メロディを「Melody」、選択中のリズムを「Drums」の別トラックで書き出します。ループは1周分、拍子は4/4、分解能は480
               PPQです。
             </p>
             <label className="field-label">
@@ -1431,6 +1479,7 @@ export default function App() {
                     {
                       beats: song.beats,
                       pattern: song.pattern,
+                      rhythm: song.rhythm ?? "off",
                       velocity: sound.settings.velocity,
                     },
                   ),

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AudioEngine } from "./engine";
 import { makeChord } from "../music/chords";
 const starts = vi.fn();
+const drumStarts = vi.fn();
 describe("再生タイムライン", () => {
   const chords = [makeChord("C", "major"), makeChord("G", "7")];
   let engine: AudioEngine;
@@ -16,11 +17,14 @@ describe("再生タイムライン", () => {
       ],
     });
     starts.mockClear();
+    drumStarts.mockClear();
     engine = new AudioEngine(
       {
         ready: async () => {},
         noteOn: starts,
         noteOff: vi.fn(),
+        percussionOn: drumStarts,
+        percussionOff: vi.fn(),
         allNotesOff: vi.fn(),
         setVolume: vi.fn(),
         dispose: vi.fn(),
@@ -78,5 +82,32 @@ describe("再生タイムライン", () => {
     vi.setSystemTime(Date.now() + 60000);
     await vi.advanceTimersByTimeAsync(25);
     expect(starts.mock.calls.length).toBeLessThanOrEqual(10);
+  });
+  it("ドラムイベントはピアノではなく打楽器出力へ送る", async () => {
+    const report = vi.fn();
+    await engine.playSequence(
+      {
+        events: [
+          {
+            note: 36,
+            startBeat: 0,
+            durationBeat: 0.1,
+            velocity: 100,
+            chordIndex: 0,
+            track: "drum",
+          },
+        ],
+        durationBeats: 1,
+        beatsPerChord: 1,
+        chordStartBeats: [0],
+        chordCount: 1,
+        markers: [],
+      },
+      120,
+      false,
+      report,
+    );
+    expect(drumStarts).toHaveBeenCalledWith(36, 100, expect.any(Number));
+    expect(starts).not.toHaveBeenCalled();
   });
 });

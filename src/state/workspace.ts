@@ -21,6 +21,7 @@ export function newSong(sample = false): Song {
         id: uid(),
         name: "Aメロ",
         key,
+        melody: [],
         chords: sample
           ? [chords[0], chords[5], chords[3], chords[4]].map((c) => entry(c))
           : [],
@@ -29,6 +30,7 @@ export function newSong(sample = false): Song {
     bpm: 90,
     beats: 4,
     pattern: "block",
+    rhythm: "off",
     loop: true,
     updatedAt: new Date().toISOString(),
   };
@@ -44,6 +46,10 @@ export function validSong(value: unknown): value is Song {
     s.bpm <= 240 &&
     [1, 2, 3, 4, 6, 8].includes(s.beats) &&
     ["block", "arpeggio"].includes(s.pattern) &&
+    (s.rhythm === undefined ||
+      ["off", "metronome", "twoBeat", "fourBeat", "eightBeat"].includes(
+        s.rhythm,
+      )) &&
     typeof s.loop === "boolean" &&
     typeof s.updatedAt === "string" &&
     Array.isArray(s.sections) &&
@@ -57,6 +63,25 @@ export function validSong(value: unknown): value is Song {
         /^[A-G][#b]{0,2}$/.test(section.key.tonic) &&
         ["major", "minor"].includes(section.key.mode) &&
         Array.isArray(section.chords) &&
+        (section.melody === undefined ||
+          (Array.isArray(section.melody) &&
+            section.melody.every(
+              (note) =>
+                note &&
+                typeof note.id === "string" &&
+                Number.isInteger(note.note) &&
+                note.note >= 0 &&
+                note.note <= 127 &&
+                Number.isFinite(note.startBeat) &&
+                note.startBeat >= 0 &&
+                Number.isFinite(note.durationBeats) &&
+                note.durationBeats > 0 &&
+                note.durationBeats <= 16 &&
+                (note.velocity === undefined ||
+                  (Number.isInteger(note.velocity) &&
+                    note.velocity >= 1 &&
+                    note.velocity <= 127)),
+            ))) &&
         section.chords.every(
           (e) =>
             e &&
@@ -104,8 +129,10 @@ function loadWorkspace(): Workspace {
         return {
           songs: parsed.songs.map((song: Song) => ({
             ...song,
+            rhythm: song.rhythm ?? "off",
             sections: song.sections.map((s) => ({
               ...s,
+              melody: s.melody ?? [],
               chords: s.chords.map((e) => ({
                 ...e,
                 beats: e.beats ?? song.beats,

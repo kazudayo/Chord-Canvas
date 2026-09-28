@@ -745,6 +745,243 @@ i.dominant-dot,
 .next-slot:hover {
   background: #eff4e9;
 }
+.melody-editor {
+  margin: 2px 0 18px;
+  padding: 14px;
+  border: 1px solid #e4e9df;
+  border-radius: 9px;
+  background: #fafbf8;
+}
+.melody-heading,
+.melody-heading > div {
+  display: flex;
+  align-items: center;
+}
+.melody-heading {
+  justify-content: space-between;
+  gap: 12px;
+  color: #7f8e76;
+}
+.melody-heading > div {
+  gap: 8px;
+}
+.melody-heading span {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+}
+.melody-tools {
+  gap: 7px !important;
+}
+.melody-tools span {
+  color: #8b9784;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+.melody-tools button {
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  border: 1px solid #dce3d7;
+  border-radius: 7px;
+  background: white;
+  color: #9b7771;
+}
+.melody-tools button:disabled {
+  opacity: 0.35;
+}
+.piano-roll-help {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 0 8px;
+  color: #929d8c;
+  font-size: 8px;
+}
+.piano-roll-help i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #c3cbbd;
+}
+.piano-roll-help strong {
+  margin-left: auto;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #eef2e9;
+  color: #73836c;
+  font-size: 7px;
+  font-weight: 650;
+}
+.piano-roll-scroll {
+  max-height: 326px;
+  overflow: auto;
+  border: 1px solid #dce2d7;
+  border-radius: 7px;
+  background: #f5f7f2;
+  scrollbar-width: thin;
+}
+.piano-roll-inner {
+  width: max-content;
+  min-width: 100%;
+}
+.piano-roll-timeline,
+.piano-roll-body {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+}
+.piano-roll-timeline {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  height: 27px;
+  border-bottom: 1px solid #cfd7ca;
+  background: #e9eee5;
+}
+.piano-roll-corner,
+.piano-keys {
+  position: sticky;
+  left: 0;
+  z-index: 7;
+  flex: 0 0 52px;
+  width: 52px;
+}
+.piano-roll-corner {
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  border-right: 1px solid #cdd5c8;
+  background: #dfe6da;
+  color: #768171;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.piano-roll-beats {
+  position: relative;
+  flex: none;
+  height: 27px;
+}
+.piano-roll-beats span {
+  position: absolute;
+  inset-block: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 5px;
+  border-left: 1px solid #aebbaa;
+  color: #6d7869;
+  font-family: "DM Sans", sans-serif;
+  font-size: 8px;
+}
+.piano-keys {
+  overflow: hidden;
+  border-right: 1px solid #c8d0c4;
+  background: white;
+}
+.piano-keys > div {
+  position: relative;
+  box-sizing: border-box;
+  border-bottom: 1px solid #e2e6df;
+  background: #fdfefd;
+}
+.piano-keys > div.black {
+  width: 35px;
+  border-bottom-color: #38413b;
+  border-radius: 0 0 3px 0;
+  background: #4d5650;
+  color: #f1f3f0;
+}
+.piano-keys span {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  font-size: 7px;
+  line-height: 1;
+}
+.piano-roll-grid {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+.piano-roll-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+  border-bottom: 1px solid #e2e7df;
+  background: #fafbf8;
+}
+.piano-roll-row.black {
+  background: #f0f3ed;
+}
+.piano-roll-row:nth-of-type(12n + 2) {
+  border-bottom-color: #c7d0c3;
+}
+.piano-roll-line {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #dde3d9;
+  pointer-events: none;
+}
+.piano-roll-line.beat {
+  background: #bfcabe;
+}
+.piano-roll-note {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid #537950;
+  border-radius: 3px;
+  background: #719769;
+  box-shadow: 0 1px 2px rgba(46, 69, 46, 0.16);
+  color: white;
+  cursor: grab;
+  touch-action: none;
+}
+.piano-roll-note:active {
+  cursor: grabbing;
+}
+.piano-roll-note.selected {
+  outline: 2px solid #3f633c;
+  outline-offset: 1px;
+  background: #5f8958;
+}
+.piano-roll-note.draft {
+  opacity: 0.7;
+}
+.piano-roll-note > span {
+  display: block;
+  overflow: hidden;
+  padding: 2px 8px 0 4px;
+  font-size: 7px;
+  line-height: 12px;
+  white-space: nowrap;
+  text-overflow: clip;
+  pointer-events: none;
+}
+.piano-roll-note > b {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  width: 6px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.48);
+  cursor: ew-resize;
+}
+.melody-empty {
+  margin: 11px 0 0;
+  color: #a0aa9b;
+  font-size: 9px;
+}
 .bass-line {
   border-top: 1px solid #edf0e7;
   display: flex;
@@ -753,6 +990,21 @@ i.dominant-dot,
   min-height: 48px;
   color: #9aa68f;
   font-size: 10px;
+}
+@media (max-width: 760px) {
+  .piano-roll-help span,
+  .piano-roll-help i {
+    display: none;
+  }
+  .piano-roll-scroll {
+    max-height: 288px;
+  }
+  .melody-tools span {
+    max-width: 155px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
 }
 .bass-line > span {
   font-size: 7px;
@@ -1411,12 +1663,16 @@ i.dominant-dot,
   color: #a0aa91;
   white-space: nowrap;
 }
-.pattern-select {
+.pattern-select,
+.rhythm-select {
   height: 32px;
   font-size: 10px;
   border-color: #e6ebdd;
   color: #8d9b7c;
   min-width: 113px;
+}
+.rhythm-select {
+  min-width: 128px;
 }
 .transport-extra {
   display: flex;
@@ -2243,7 +2499,7 @@ i.dominant-dot,
     font-size: 14px;
   }
   .app-shell {
-    padding-bottom: 145px;
+    padding-bottom: 177px;
   }
   .topbar {
     height: 70px;
@@ -2668,7 +2924,7 @@ i.dominant-dot,
     margin: 0;
   }
   .transport {
-    height: 122px;
+    height: 154px;
     padding: 11px 15px 12px;
     display: flex;
     flex-wrap: wrap;
@@ -2719,7 +2975,8 @@ i.dominant-dot,
   .beats-control span {
     font-size: 8px;
   }
-  .pattern-select {
+  .pattern-select,
+  .rhythm-select {
     order: 4;
     margin-top: 0;
     width: calc(50% - 8px);
@@ -2727,9 +2984,12 @@ i.dominant-dot,
     height: 29px;
     min-width: 0;
   }
-  .transport-extra {
+  .rhythm-select {
     order: 5;
-    flex: 0 0 calc(50% - 8px);
+  }
+  .transport-extra {
+    order: 6;
+    flex: 0 0 100%;
     justify-content: center;
     height: 29px;
     margin-top: 0;
@@ -2744,7 +3004,7 @@ i.dominant-dot,
     padding-left: 10px;
   }
   .toast {
-    bottom: 140px;
+    bottom: 170px;
     min-width: 260px;
     font-size: 11px;
   }

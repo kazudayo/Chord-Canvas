@@ -3,6 +3,8 @@ export interface NoteOutput {
   ready(): Promise<void>;
   noteOn(note: number, velocity: number, atTime: number): void;
   noteOff(note: number, atTime: number): void;
+  percussionOn?(note: number, velocity: number, atTime: number): void;
+  percussionOff?(note: number, atTime: number): void;
   allNotesOff(): void;
   setVolume(value: number): void;
   dispose(): void;

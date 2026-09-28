@@ -15,6 +15,56 @@ afterEach(() => {
   vi.useRealTimers();
 });
 describe("再生中断の安全性", () => {
+  it("停止状態からの再生準備ではAll Notes Offを送らない", async () => {
+    vi.useFakeTimers({
+      toFake: [
+        "setTimeout",
+        "clearTimeout",
+        "setInterval",
+        "clearInterval",
+        "Date",
+      ],
+    });
+    const out = output(),
+      engine = new AudioEngine(out, () => Date.now() / 1000);
+    engine.prepare();
+    expect(out.allNotesOff).not.toHaveBeenCalled();
+    await engine.play(
+      [makeChord("C", "major")],
+      90,
+      4,
+      "block",
+      false,
+      () => {},
+    );
+    expect(out.noteOn).toHaveBeenCalled();
+    expect(out.allNotesOff).not.toHaveBeenCalled();
+    engine.dispose();
+  });
+  it("再生中の再生準備では鳴っている音を停止する", async () => {
+    vi.useFakeTimers({
+      toFake: [
+        "setTimeout",
+        "clearTimeout",
+        "setInterval",
+        "clearInterval",
+        "Date",
+      ],
+    });
+    const out = output(),
+      engine = new AudioEngine(out, () => Date.now() / 1000);
+    await engine.play(
+      [makeChord("C", "major")],
+      90,
+      4,
+      "block",
+      false,
+      () => {},
+    );
+    engine.prepare();
+    expect(out.allNotesOff).toHaveBeenCalledTimes(1);
+    engine.dispose();
+  });
   it("サンプル読み込み中のStopで後から発音しない", async () => {
     const out = output();
     let complete!: () => void;

@@ -1,4 +1,4 @@
-import type { Chord, Pattern, Section } from "../music/types";
+import type { Chord, Pattern, RhythmPattern, Section } from "../music/types";
 import { voicing } from "../music/voiceLeading";
 export interface NoteEvent {
   note: number;
@@ -6,6 +6,7 @@ export interface NoteEvent {
   durationBeat: number;
   velocity: number;
   chordIndex: number;
+  track?: "chord" | "melody" | "drum";
 }
 export interface PlaybackSequence {
   events: NoteEvent[];
@@ -19,6 +20,7 @@ export interface PlaybackOptions {
   beats: number;
   beatDurations?: number[];
   pattern: Pattern;
+  rhythm?: RhythmPattern;
   velocity?: number;
 }
 export function playbackVoicing(chord: Chord, previous?: number[]): number[] {
@@ -63,6 +65,7 @@ export function createPlaybackEvents(
         durationBeat: chordBeats - offset,
         velocity,
         chordIndex,
+        track: "chord",
       });
     });
     events.push({
@@ -71,6 +74,7 @@ export function createPlaybackEvents(
       durationBeat: chordBeats,
       velocity: Math.max(1, Math.round(velocity * 0.78)),
       chordIndex,
+      track: "chord",
     });
     cursor += chordBeats;
   });
@@ -97,13 +101,101 @@ export function createSongPlaybackEvents(
     },
   );
   let beat = 0;
+  let chordOffset = 0;
   sequence.markers = sections.map((s) => {
     const marker = { name: s.name, beat };
-    beat += s.chords.reduce(
+    const sectionDuration = s.chords.reduce(
       (total, chord) => total + (chord.beats ?? options.beats),
       0,
     );
+    const localStarts: number[] = [];
+    let localBeat = 0;
+    for (const chord of s.chords) {
+      localStarts.push(localBeat);
+      localBeat += chord.beats ?? options.beats;
+    }
+    for (const melody of s.melody ?? []) {
+      if (melody.startBeat >= sectionDuration) continue;
+      let localChordIndex = Math.max(0, localStarts.length - 1);
+      for (let i = 1; i < localStarts.length; i++) {
+        if (melody.startBeat < localStarts[i]) {
+          localChordIndex = i - 1;
+          break;
+        }
+      }
+      sequence.events.push({
+        note: melody.note,
+        startBeat: beat + melody.startBeat,
+        durationBeat: Math.min(
+          melody.durationBeats,
+          sectionDuration - melody.startBeat,
+        ),
+        velocity: Math.max(
+          1,
+          Math.min(127, melody.velocity ?? (options.velocity ?? 85) + 10),
+        ),
+        chordIndex: chordOffset + localChordIndex,
+        track: "melody",
+      });
+    }
+    beat += sectionDuration;
+    chordOffset += s.chords.length;
     return marker;
   });
+  sequence.events.sort((a, b) => a.startBeat - b.startBeat || a.note - b.note);
+  addRhythmEvents(sequence, options.rhythm ?? "off");
+  return sequence;
+}
+
+export function addRhythmEvents(
+  sequence: PlaybackSequence,
+  rhythm: RhythmPattern,
+): PlaybackSequence {
+  if (rhythm === "off" || sequence.durationBeats <= 0) return sequence;
+  const chordIndexAt = (beat: number) => {
+    let index = Math.max(0, sequence.chordCount - 1);
+    for (let i = 1; i < sequence.chordStartBeats.length; i++) {
+      if (beat < sequence.chordStartBeats[i]) {
+        index = i - 1;
+        break;
+      }
+    }
+    return index;
+  };
+  const hit = (note: number, beat: number, velocity: number) => {
+    if (beat >= sequence.durationBeats) return;
+    sequence.events.push({
+      note,
+      startBeat: beat,
+      durationBeat: Math.min(0.1, sequence.durationBeats - beat),
+      velocity,
+      chordIndex: chordIndexAt(beat),
+      track: "drum",
+    });
+  };
+  if (rhythm === "metronome") {
+    for (let beat = 0; beat < sequence.durationBeats; beat += 1)
+      hit(beat % 4 === 0 ? 76 : 77, beat, beat % 4 === 0 ? 108 : 76);
+  } else if (rhythm === "twoBeat") {
+    for (let beat = 0; beat < sequence.durationBeats; beat += 1)
+      hit(beat % 2 === 0 ? 36 : 38, beat, beat % 2 === 0 ? 105 : 92);
+  } else if (rhythm === "fourBeat") {
+    for (let beat = 0; beat < sequence.durationBeats; beat += 1) {
+      hit(42, beat, 64);
+      hit(36, beat, beat % 4 === 0 ? 106 : 78);
+      if (beat % 4 === 1 || beat % 4 === 3) hit(38, beat, 100);
+    }
+  } else {
+    for (let beat = 0; beat < sequence.durationBeats; beat += 0.5)
+      hit(42, beat, Number.isInteger(beat) ? 72 : 55);
+    for (let measure = 0; measure < sequence.durationBeats; measure += 4) {
+      hit(36, measure, 108);
+      hit(38, measure + 1, 101);
+      hit(36, measure + 2, 96);
+      hit(36, measure + 2.5, 78);
+      hit(38, measure + 3, 104);
+    }
+  }
+  sequence.events.sort((a, b) => a.startBeat - b.startBeat || a.note - b.note);
   return sequence;
 }

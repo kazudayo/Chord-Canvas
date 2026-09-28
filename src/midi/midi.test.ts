@@ -4,7 +4,12 @@ import {
   createSongPlaybackEvents,
 } from "../audio/events";
 import { invert, makeChord } from "../music/chords";
-import { exportMidi, variableLength, MIDI_PPQ } from "./export";
+import {
+  exportArrangementMidi,
+  exportMidi,
+  variableLength,
+  MIDI_PPQ,
+} from "./export";
 import { MidiNoteOutput } from "./MidiOutput";
 import { MidiDevices } from "./devices";
 import { normalizeSound } from "../state/sound";
@@ -97,6 +102,61 @@ describe("共通NoteEvent", () => {
       createPlaybackEvents([], { beats: 4, pattern: "block" }).events,
     ).toEqual([]);
   });
+  it("セクションのメロディをコードと同じタイムラインへ重ねる", () => {
+    const sequence = createSongPlaybackEvents(
+      [
+        {
+          id: "verse",
+          name: "Aメロ",
+          key: { tonic: "C", mode: "major" },
+          chords: [{ id: "c", chord: chords[0], beats: 4 }],
+          melody: [
+            {
+              id: "m",
+              note: 72,
+              startBeat: 1.5,
+              durationBeats: 1,
+              velocity: 101,
+            },
+          ],
+        },
+      ],
+      { beats: 4, pattern: "block" },
+    );
+    expect(sequence.events.find((event) => event.track === "melody")).toEqual(
+      expect.objectContaining({
+        note: 72,
+        startBeat: 1.5,
+        durationBeat: 1,
+        velocity: 101,
+        chordIndex: 0,
+      }),
+    );
+  });
+  it("メトロノームと2・4・8ビートのドラムイベントを生成する", () => {
+    const section = {
+      id: "verse",
+      name: "Aメロ",
+      key: { tonic: "C", mode: "major" as const },
+      chords: [{ id: "c", chord: chords[0], beats: 4 }],
+    };
+    const drums = (
+      rhythm: "metronome" | "twoBeat" | "fourBeat" | "eightBeat",
+    ) =>
+      createSongPlaybackEvents([section], {
+        beats: 4,
+        pattern: "block",
+        rhythm,
+      }).events.filter((event) => event.track === "drum");
+    expect(drums("metronome")).toHaveLength(4);
+    expect(drums("twoBeat").map((event) => event.note)).toEqual([
+      36, 38, 36, 38,
+    ]);
+    expect(drums("fourBeat").length).toBeGreaterThan(4);
+    expect(drums("eightBeat").some((event) => event.startBeat === 0.5)).toBe(
+      true,
+    );
+  });
   it("サンプル21個と最寄り音高を選択", () => {
     expect(PIANO_ZONES).toHaveLength(21);
     expect(PIANO_ZONES[8].midi).toBe(60);
@@ -169,6 +229,60 @@ describe("標準MIDIファイル", () => {
         .sort((a, b) => a - b),
     );
   });
+  it("コードとメロディをSMF1の別トラック・別チャンネルへ書き出す", () => {
+    const sequence = createSongPlaybackEvents(
+      [
+        {
+          id: "chorus",
+          name: "サビ",
+          key: { tonic: "C", mode: "major" },
+          chords: [{ id: "c", chord: chords[0], beats: 4 }],
+          melody: [{ id: "m", note: 76, startBeat: 0, durationBeats: 2 }],
+        },
+      ],
+      { beats: 4, pattern: "block" },
+    );
+    const bytes = exportArrangementMidi(sequence, 120, 1);
+    expect([...bytes.slice(8, 14)]).toEqual([0, 1, 0, 2, 1, 224]);
+    expect(new TextDecoder().decode(bytes)).toContain("Chords");
+    expect(new TextDecoder().decode(bytes)).toContain("Melody");
+
+    const tracks: Uint8Array[] = [];
+    let offset = 14;
+    for (let index = 0; index < 2; index++) {
+      expect(new TextDecoder().decode(bytes.slice(offset, offset + 4))).toBe(
+        "MTrk",
+      );
+      const length = new DataView(
+        bytes.buffer,
+        bytes.byteOffset + offset + 4,
+        4,
+      ).getUint32(0);
+      tracks.push(bytes.slice(offset + 8, offset + 8 + length));
+      offset += 8 + length;
+    }
+    expect([...tracks[0]]).toContain(0x90);
+    expect([...tracks[0]]).not.toContain(0x91);
+    expect([...tracks[1]]).toContain(0x91);
+    expect([...tracks[1]]).not.toContain(0x90);
+  });
+  it("選択したリズムをDrumsトラック・MIDIチャンネル10へ書き出す", () => {
+    const sequence = createSongPlaybackEvents(
+      [
+        {
+          id: "verse",
+          name: "Aメロ",
+          key: { tonic: "C", mode: "major" },
+          chords: [{ id: "c", chord: chords[0], beats: 4 }],
+        },
+      ],
+      { beats: 4, pattern: "block", rhythm: "eightBeat" },
+    );
+    const bytes = exportArrangementMidi(sequence, 100, 1);
+    expect([...bytes.slice(8, 14)]).toEqual([0, 1, 0, 3, 1, 224]);
+    expect(new TextDecoder().decode(bytes)).toContain("Drums");
+    expect([...bytes]).toContain(0x99);
+  });
   it("可変長整数は標準形式", () => {
     expect(variableLength(0)).toEqual([0]);
     expect(variableLength(127)).toEqual([127]);
@@ -196,6 +310,15 @@ describe("MIDI出力と安全停止", () => {
     out.noteOff(60, 3);
     expect(p.send).toHaveBeenCalledWith([159, 60, 100], 2000);
     expect(p.send).toHaveBeenCalledWith([143, 60, 0], 3000);
+  });
+  it("ドラムは選択音源にMIDIチャンネル10で送る", async () => {
+    const p = port(),
+      out = new MidiNoteOutput(p, 1);
+    await out.ready();
+    out.percussionOn(36, 104, 2);
+    out.percussionOff(36, 2.1);
+    expect(p.send).toHaveBeenCalledWith([153, 36, 104], 2000);
+    expect(p.send).toHaveBeenCalledWith([137, 36, 0], 2100);
   });
   it("Panicはキューを取消、Note Off / CC123 / CC120を送る", () => {
     const p = port(),

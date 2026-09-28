@@ -59,6 +59,13 @@ export interface ChordEntry {
   origin?:
     "manual" | "recommendation" | "preset" | "sectionConnection" | "modulation";
 }
+export interface MelodyNote {
+  id: string;
+  note: number;
+  startBeat: number;
+  durationBeats: number;
+  velocity?: number;
+}
 export interface RecommendationReason {
   id: string;
   title: string;
@@ -77,8 +84,11 @@ export interface Section {
   name: string;
   key: Key;
   chords: ChordEntry[];
+  melody?: MelodyNote[];
 }
 export type Pattern = "block" | "arpeggio";
+export type RhythmPattern =
+  "off" | "metronome" | "twoBeat" | "fourBeat" | "eightBeat";
 export interface Song {
   id: string;
   title: string;
@@ -86,6 +96,7 @@ export interface Song {
   bpm: number;
   beats: number;
   pattern: Pattern;
+  rhythm?: RhythmPattern;
   loop: boolean;
   updatedAt: string;
   audioSettings?: AudioSettings;

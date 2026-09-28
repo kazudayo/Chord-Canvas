@@ -1,5 +1,9 @@
 import type { Chord, Pattern } from "../music/types";
-import { createPlaybackEvents, type PlaybackSequence } from "./events";
+import {
+  createPlaybackEvents,
+  type NoteEvent,
+  type PlaybackSequence,
+} from "./events";
 import { audioClock, type NoteOutput } from "./output";
 import { PianoSampler } from "./PianoSampler";
 export type PlaybackState = "stopped" | "playing" | "paused";
@@ -8,6 +12,7 @@ interface Edge {
   note: number;
   velocity: number;
   on: boolean;
+  track?: NoteEvent["track"];
 }
 export class AudioEngine {
   private timer?: ReturnType<typeof setInterval>;
@@ -36,7 +41,7 @@ export class AudioEngine {
     this.velocity = value;
   }
   async previewNote() {
-    this.stop();
+    this.prepare();
     await this.playSequence(
       {
         events: [
@@ -60,7 +65,7 @@ export class AudioEngine {
     );
   }
   async preview(chord: Chord, pattern: Pattern = "block") {
-    this.stop();
+    this.prepare();
     await this.play([chord], 90, 2, pattern, false, () => {});
   }
   async previewRoute(
@@ -69,7 +74,7 @@ export class AudioEngine {
     bpm = 90,
     beats = 4,
   ) {
-    this.stop();
+    this.prepare();
     await this.play(chords, bpm, beats, pattern, false, () => {});
   }
   async play(
@@ -107,12 +112,19 @@ export class AudioEngine {
       total = sequence.durationBeats * secondsPerBeat;
     const edges: Edge[] = sequence.events
       .flatMap((e) => [
-        { beat: e.startBeat, note: e.note, velocity: e.velocity, on: true },
+        {
+          beat: e.startBeat,
+          note: e.note,
+          velocity: e.velocity,
+          on: true,
+          track: e.track,
+        },
         {
           beat: e.startBeat + e.durationBeat,
           note: e.note,
           velocity: 0,
           on: false,
+          track: e.track,
         },
       ])
       .sort((a, b) => a.beat - b.beat || Number(a.on) - Number(b.on));
@@ -127,7 +139,11 @@ export class AudioEngine {
       cursor++;
     if (position > 0) {
       for (const e of sequence.events)
-        if (e.startBeat < position && e.startBeat + e.durationBeat > position)
+        if (
+          e.track !== "drum" &&
+          e.startBeat < position &&
+          e.startBeat + e.durationBeat > position
+        )
           this.output.noteOn(e.note, e.velocity, this.clock());
     }
     let lastTick = this.clock();
@@ -146,7 +162,11 @@ export class AudioEngine {
         cursor = 0;
         while (cursor < edges.length && edges[cursor].beat < beat) cursor++;
         for (const e of sequence.events)
-          if (e.startBeat < beat && e.startBeat + e.durationBeat > beat)
+          if (
+            e.track !== "drum" &&
+            e.startBeat < beat &&
+            e.startBeat + e.durationBeat > beat
+          )
             this.output.noteOn(e.note, e.velocity, now);
       }
       lastTick = now;
@@ -175,13 +195,29 @@ export class AudioEngine {
           now,
           this.startedAt + absoluteBeat * secondsPerBeat,
         );
-        if (edge.on) this.output.noteOn(edge.note, edge.velocity, time);
+        if (edge.track === "drum") {
+          if (edge.on)
+            this.output.percussionOn?.(edge.note, edge.velocity, time);
+          else this.output.percussionOff?.(edge.note, time);
+        } else if (edge.on) this.output.noteOn(edge.note, edge.velocity, time);
         else this.output.noteOff(edge.note, time);
         cursor++;
       }
     };
     tick();
     this.timer = setInterval(tick, 25);
+  }
+  prepare() {
+    if (this.state !== "stopped" || this.timer !== undefined) {
+      this.stop();
+      return;
+    }
+    // Cancel a pending async start without sending MIDI panic messages.
+    // Some external instruments process a just-sent CC120/123 after the first
+    // Note On and cut the opening chord short.
+    this.epoch++;
+    this.elapsed = 0;
+    this.index = -1;
   }
   pause() {
     if (this.state !== "playing") return;
