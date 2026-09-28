@@ -23,19 +23,34 @@ export class AudioEngine {
   private callback?: (index: number, state: PlaybackState) => void;
   private index = -1;
   private velocity = 85;
+  private percussionOutput?: NoteOutput;
   constructor(
     private output: NoteOutput = new PianoSampler(),
     private clock = audioClock,
   ) {}
-  async ready() {
-    await this.output.ready();
+  async ready(includePercussion = false) {
+    await Promise.all([
+      this.output.ready(),
+      includePercussion &&
+      this.percussionOutput &&
+      this.percussionOutput !== this.output
+        ? this.percussionOutput.ready()
+        : Promise.resolve(),
+    ]);
   }
   setOutput(output: NoteOutput) {
     this.stop();
     this.output = output;
   }
+  setPercussionOutput(output: NoteOutput) {
+    if (this.percussionOutput === output) return;
+    this.percussionOutput?.allNotesOff();
+    this.percussionOutput = output;
+  }
   setVolume(value: number) {
     this.output.setVolume(value);
+    if (this.percussionOutput && this.percussionOutput !== this.output)
+      this.percussionOutput.setVolume(value);
   }
   setVelocity(value: number) {
     this.velocity = value;
@@ -106,7 +121,7 @@ export class AudioEngine {
   ) {
     if (!sequence.chordCount || this.state === "playing") return;
     const token = ++this.epoch;
-    await this.ready();
+    await this.ready(sequence.events.some((event) => event.track === "drum"));
     if (token !== this.epoch) return;
     const secondsPerBeat = 60 / bpm,
       total = sequence.durationBeats * secondsPerBeat;
@@ -197,8 +212,16 @@ export class AudioEngine {
         );
         if (edge.track === "drum") {
           if (edge.on)
-            this.output.percussionOn?.(edge.note, edge.velocity, time);
-          else this.output.percussionOff?.(edge.note, time);
+            (this.percussionOutput ?? this.output).percussionOn?.(
+              edge.note,
+              edge.velocity,
+              time,
+            );
+          else
+            (this.percussionOutput ?? this.output).percussionOff?.(
+              edge.note,
+              time,
+            );
         } else if (edge.on) this.output.noteOn(edge.note, edge.velocity, time);
         else this.output.noteOff(edge.note, time);
         cursor++;
@@ -225,14 +248,14 @@ export class AudioEngine {
     this.elapsed = this.clock() - this.startedAt;
     this.state = "paused";
     clearInterval(this.timer);
-    this.output.allNotesOff();
+    this.allNotesOff();
     this.callback?.(this.index, "paused");
   }
   stop() {
     this.epoch++;
     clearInterval(this.timer);
     this.timer = undefined;
-    this.output.allNotesOff();
+    this.allNotesOff();
     this.elapsed = 0;
     this.index = -1;
     this.state = "stopped";
@@ -241,5 +264,12 @@ export class AudioEngine {
   dispose() {
     this.stop();
     this.output.dispose();
+    if (this.percussionOutput && this.percussionOutput !== this.output)
+      this.percussionOutput.dispose();
+  }
+  private allNotesOff() {
+    this.output.allNotesOff();
+    if (this.percussionOutput && this.percussionOutput !== this.output)
+      this.percussionOutput.allNotesOff();
   }
 }

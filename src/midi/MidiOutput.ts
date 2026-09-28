@@ -9,7 +9,6 @@ export interface MidiPort {
 }
 export class MidiNoteOutput implements NoteOutput {
   private active = new Set<number>();
-  private activeDrums = new Set<number>();
   readonly channel: number;
   constructor(
     readonly port: MidiPort,
@@ -36,41 +35,25 @@ export class MidiNoteOutput implements NoteOutput {
   noteOff(note: number, atTime: number) {
     this.port.send([0x80 + this.channel, note, 0], atTime * 1000);
   }
-  percussionOn(note: number, velocity: number, atTime: number) {
-    this.activeDrums.add(note);
-    this.port.send(
-      [0x99, note, Math.max(1, Math.min(127, Math.round(velocity)))],
-      atTime * 1000,
-    );
-  }
-  percussionOff(note: number, atTime: number) {
-    this.port.send([0x89, note, 0], atTime * 1000);
-    this.activeDrums.delete(note);
-  }
   allNotesOff() {
     try {
       this.port.clear?.();
       for (const note of this.active)
         this.port.send([0x80 + this.channel, note, 0]);
-      for (const note of this.activeDrums) this.port.send([0x89, note, 0]);
       this.port.send([0xb0 + this.channel, 64, 0]);
       this.port.send([0xb0 + this.channel, 123, 0]);
       this.port.send([0xb0 + this.channel, 120, 0]);
       if (!this.port.clear)
         this.port.send([0xb0 + this.channel, 120, 0], performance.now() + 100);
-      this.port.send([0xb9, 123, 0]);
-      this.port.send([0xb9, 120, 0]);
     } catch {
       /* A physically disconnected device cannot receive messages. */
     }
     this.active.clear();
-    this.activeDrums.clear();
   }
   setVolume(value: number) {
     try {
       const level = Math.round(Math.max(0, Math.min(1, value)) * 127);
       this.port.send([0xb0 + this.channel, 7, level]);
-      this.port.send([0xb9, 7, level]);
     } catch {
       /* Disconnected. */
     }

@@ -311,15 +311,6 @@ describe("MIDI出力と安全停止", () => {
     expect(p.send).toHaveBeenCalledWith([159, 60, 100], 2000);
     expect(p.send).toHaveBeenCalledWith([143, 60, 0], 3000);
   });
-  it("ドラムは選択音源にMIDIチャンネル10で送る", async () => {
-    const p = port(),
-      out = new MidiNoteOutput(p, 1);
-    await out.ready();
-    out.percussionOn(36, 104, 2);
-    out.percussionOff(36, 2.1);
-    expect(p.send).toHaveBeenCalledWith([153, 36, 104], 2000);
-    expect(p.send).toHaveBeenCalledWith([137, 36, 0], 2100);
-  });
   it("Panicはキューを取消、Note Off / CC123 / CC120を送る", () => {
     const p = port(),
       out = new MidiNoteOutput(p, 2);

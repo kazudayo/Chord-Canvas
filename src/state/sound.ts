@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { AudioSettings } from "../music/types";
 import { AudioEngine } from "../audio/engine";
 import { PianoSampler } from "../audio/PianoSampler";
+import { PercussionSynth } from "../audio/PercussionSynth";
 import { MidiDevices } from "../midi/devices";
 import { MidiNoteOutput } from "../midi/MidiOutput";
 const KEY = "harmotrail.sound.v1";
@@ -35,9 +36,7 @@ function load() {
   try {
     return normalizeSound(
       JSON.parse(
-        localStorage.getItem(KEY) ??
-          localStorage.getItem(LEGACY_KEY) ??
-          "null",
+        localStorage.getItem(KEY) ?? localStorage.getItem(LEGACY_KEY) ?? "null",
       ),
     );
   } catch {
@@ -52,6 +51,7 @@ export function useSoundEngine() {
   const [midiEnabled, setMidiEnabled] = useState(false);
   const engineRef = useRef<AudioEngine | null>(null),
     pianoRef = useRef<PianoSampler | null>(null),
+    percussionRef = useRef<PercussionSynth | null>(null),
     devicesRef = useRef<MidiDevices | null>(null);
   const outputKey = useRef("");
   const settingsRef = useRef(settings);
@@ -65,8 +65,11 @@ export function useSoundEngine() {
     settings.soundSource === "midi" && selectedPort ? "midi" : "piano";
   function engine() {
     if (!pianoRef.current) pianoRef.current = new PianoSampler();
-    if (!engineRef.current)
+    if (!percussionRef.current) percussionRef.current = new PercussionSynth();
+    if (!engineRef.current) {
       engineRef.current = new AudioEngine(pianoRef.current);
+      engineRef.current.setPercussionOutput(percussionRef.current);
+    }
     const key =
       effectiveSource === "midi"
         ? `${selectedPort!.id}:${settings.midiChannel}`
@@ -105,9 +108,11 @@ export function useSoundEngine() {
       window.removeEventListener("beforeunload", stop);
       engineRef.current?.dispose();
       pianoRef.current?.dispose();
+      percussionRef.current?.dispose();
       devicesRef.current?.dispose();
       engineRef.current = null;
       pianoRef.current = null;
+      percussionRef.current = null;
       devicesRef.current = null;
       outputKey.current = "";
     };

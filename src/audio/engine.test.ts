@@ -83,8 +83,19 @@ describe("再生タイムライン", () => {
     await vi.advanceTimersByTimeAsync(25);
     expect(starts.mock.calls.length).toBeLessThanOrEqual(10);
   });
-  it("ドラムイベントはピアノではなく打楽器出力へ送る", async () => {
+  it("MIDI選択中でもドラムイベントは専用の内蔵音源へ送る", async () => {
     const report = vi.fn();
+    const internalDrums = vi.fn();
+    engine.setPercussionOutput({
+      ready: async () => {},
+      noteOn: vi.fn(),
+      noteOff: vi.fn(),
+      percussionOn: internalDrums,
+      percussionOff: vi.fn(),
+      allNotesOff: vi.fn(),
+      setVolume: vi.fn(),
+      dispose: vi.fn(),
+    });
     await engine.playSequence(
       {
         events: [
@@ -107,7 +118,8 @@ describe("再生タイムライン", () => {
       false,
       report,
     );
-    expect(drumStarts).toHaveBeenCalledWith(36, 100, expect.any(Number));
+    expect(internalDrums).toHaveBeenCalledWith(36, 100, expect.any(Number));
+    expect(drumStarts).not.toHaveBeenCalled();
     expect(starts).not.toHaveBeenCalled();
   });
 });
