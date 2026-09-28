@@ -954,6 +954,7 @@ export default function App() {
               key={section.id}
               notes={section.melody ?? []}
               totalBeats={sectionBeats}
+              musicKey={section.key}
               onChange={updateMelody}
             />
             <div className="bass-line">

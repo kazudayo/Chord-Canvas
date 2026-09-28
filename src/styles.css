@@ -804,8 +804,29 @@ i.dominant-dot,
   border-radius: 50%;
   background: #c3cbbd;
 }
-.piano-roll-help strong {
+.piano-roll-mode-toggle {
+  display: none;
+}
+.scale-lock-toggle {
+  min-height: 25px;
   margin-left: auto;
+  padding: 0 8px;
+  gap: 5px;
+  border: 1px solid #dce4d7;
+  border-radius: 5px;
+  background: white;
+  color: #7d8b77;
+  font-size: 8px;
+  white-space: nowrap;
+}
+.scale-lock-toggle.active {
+  border-color: #78966e;
+  background: #e7efe2;
+  color: #4f7048;
+  box-shadow: inset 0 0 0 1px #b8cab0;
+}
+.piano-roll-help strong {
+  margin-left: 0;
   padding: 3px 6px;
   border-radius: 4px;
   background: #eef2e9;
@@ -892,6 +913,9 @@ i.dominant-dot,
   background: #4d5650;
   color: #f1f3f0;
 }
+.piano-keys > div.scale-disabled {
+  opacity: 0.4;
+}
 .piano-keys span {
   position: absolute;
   right: 4px;
@@ -907,6 +931,12 @@ i.dominant-dot,
   touch-action: none;
   user-select: none;
 }
+.piano-roll-grid.scroll-mode,
+.piano-roll-grid.scroll-mode .piano-roll-note,
+.piano-roll-grid.scroll-mode .piano-roll-note > b {
+  cursor: grab;
+  touch-action: pan-x pan-y;
+}
 .piano-roll-row {
   position: absolute;
   left: 0;
@@ -917,6 +947,9 @@ i.dominant-dot,
 }
 .piano-roll-row.black {
   background: #f0f3ed;
+}
+.piano-roll-row.scale-disabled {
+  background: #e4e7e2;
 }
 .piano-roll-row:nth-of-type(12n + 2) {
   border-bottom-color: #c7d0c3;
@@ -957,6 +990,10 @@ i.dominant-dot,
 .piano-roll-note.draft {
   opacity: 0.7;
 }
+.piano-roll-note.out-of-key {
+  border-color: #987b67;
+  background: #a78c78;
+}
 .piano-roll-note > span {
   display: block;
   overflow: hidden;
@@ -992,9 +1029,42 @@ i.dominant-dot,
   font-size: 10px;
 }
 @media (max-width: 760px) {
+  .piano-roll-help {
+    flex-wrap: wrap;
+  }
   .piano-roll-help span,
-  .piano-roll-help i {
+  .piano-roll-help i,
+  .piano-roll-help > svg {
     display: none;
+  }
+  .piano-roll-mode-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+    padding: 3px;
+    border-radius: 7px;
+    background: #e8ede5;
+  }
+  .piano-roll-mode-toggle button {
+    min-height: 34px;
+    padding: 0 8px;
+    gap: 6px;
+    border-radius: 5px;
+    color: #7c8977;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .piano-roll-mode-toggle button.active {
+    background: white;
+    box-shadow: 0 1px 4px rgba(50, 67, 48, 0.12);
+    color: #4f7147;
+  }
+  .scale-lock-toggle {
+    flex: 1;
+    justify-content: center;
+    min-height: 30px;
+    margin-left: 0;
+    font-size: 9px;
   }
   .piano-roll-scroll {
     max-height: 288px;

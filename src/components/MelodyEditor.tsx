@@ -1,4 +1,4 @@
-import { Music2, PencilLine, Trash2 } from "lucide-react";
+import { Hand, LockKeyhole, Music2, PencilLine, Trash2 } from "lucide-react";
 import {
   useEffect,
   useMemo,
@@ -6,7 +6,9 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import type { MelodyNote } from "../music/types";
+import { keyName, scale } from "../music/keys";
+import { pitch, pretty } from "../music/notes";
+import type { Key, MelodyNote } from "../music/types";
 
 const NOTE_NAMES = [
   "C",
@@ -62,10 +64,12 @@ function snap(value: number) {
 export function MelodyEditor({
   notes,
   totalBeats,
+  musicKey,
   onChange,
 }: {
   notes: MelodyNote[];
   totalBeats: number;
+  musicKey: Key;
   onChange: (notes: MelodyNote[]) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -77,17 +81,37 @@ export function MelodyEditor({
   const [draft, setDraft] = useState<MelodyNote | null>(null);
   const [moving, setMoving] = useState<MelodyNote | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 760px)").matches,
+  );
+  const [mobileMode, setMobileMode] = useState<"scroll" | "draw">("scroll");
+  const [scaleLock, setScaleLock] = useState(false);
+  const canEdit = !isMobile || mobileMode === "draw";
   const gridWidth = Math.max(360, totalBeats * BEAT_WIDTH);
   const gridHeight = PITCHES.length * ROW_HEIGHT;
   const beats = useMemo(
     () => Array.from({ length: Math.ceil(totalBeats) }, (_, index) => index),
     [totalBeats],
   );
+  const keyPitchClasses = useMemo(
+    () => new Set(scale(musicKey).map(pitch)),
+    [musicKey.mode, musicKey.tonic],
+  );
   const selected = notes.find((note) => note.id === selectedId);
 
   useEffect(() => {
     const viewport = scrollRef.current;
     if (viewport) viewport.scrollTop = (MAX_NOTE - 76) * ROW_HEIGHT;
+  }, []);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 760px)");
+    const update = () => setIsMobile(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
   }, []);
 
   useEffect(() => {
@@ -99,6 +123,22 @@ export function MelodyEditor({
     return [...next].sort(
       (a, b) => a.startBeat - b.startBeat || b.note - a.note,
     );
+  }
+
+  function isInKey(note: number) {
+    return keyPitchClasses.has(((note % 12) + 12) % 12);
+  }
+
+  function constrainToKey(note: number) {
+    const bounded = clamp(note, MIN_NOTE, MAX_NOTE);
+    if (!scaleLock || isInKey(bounded)) return bounded;
+    for (let distance = 1; distance < 12; distance++) {
+      const lower = bounded - distance;
+      if (lower >= MIN_NOTE && isInKey(lower)) return lower;
+      const upper = bounded + distance;
+      if (upper <= MAX_NOTE && isInKey(upper)) return upper;
+    }
+    return bounded;
   }
 
   function pointInGrid(event: ReactPointerEvent<HTMLDivElement>) {
@@ -118,11 +158,12 @@ export function MelodyEditor({
   }
 
   function beginDraw(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!totalBeats) return;
+    if (!totalBeats || !canEdit) return;
     const point = pointInGrid(event);
+    if (scaleLock && !isInKey(point.note)) return;
     const note: MelodyNote = {
       id: newId(),
-      note: point.note,
+      note: constrainToKey(point.note),
       startBeat: point.beat,
       durationBeats: Math.min(STEP, totalBeats - point.beat),
     };
@@ -140,7 +181,7 @@ export function MelodyEditor({
     const endBeat = Math.max(drawing.anchorBeat, point.beat) + STEP;
     const note = {
       ...drawing.current,
-      note: point.note,
+      note: constrainToKey(point.note),
       startBeat,
       durationBeats: Math.min(totalBeats, endBeat) - startBeat,
     };
@@ -168,6 +209,7 @@ export function MelodyEditor({
     note: MelodyNote,
     mode: NoteInteraction["mode"],
   ) {
+    if (!canEdit) return;
     event.preventDefault();
     event.stopPropagation();
     const current = { ...note };
@@ -203,7 +245,7 @@ export function MelodyEditor({
       );
       current = {
         ...interaction.original,
-        note: clamp(interaction.original.note + deltaNotes, MIN_NOTE, MAX_NOTE),
+        note: constrainToKey(interaction.original.note + deltaNotes),
         startBeat: clamp(
           interaction.original.startBeat + deltaBeats,
           0,
@@ -241,6 +283,14 @@ export function MelodyEditor({
     setSelectedId(null);
   }
 
+  function changeMobileMode(mode: "scroll" | "draw") {
+    drawRef.current = null;
+    interactionRef.current = null;
+    setDraft(null);
+    setMoving(null);
+    setMobileMode(mode);
+  }
+
   const visibleNotes = notes.map((note) =>
     moving?.id === note.id ? moving : note,
   );
@@ -273,12 +323,40 @@ export function MelodyEditor({
         </div>
       </div>
       <div className="piano-roll-help">
+        <div
+          className="piano-roll-mode-toggle"
+          role="group"
+          aria-label="スマートフォンのピアノロール操作"
+        >
+          <button
+            className={mobileMode === "scroll" ? "active" : ""}
+            aria-pressed={mobileMode === "scroll"}
+            onClick={() => changeMobileMode("scroll")}
+          >
+            <Hand size={13} /> スクロール
+          </button>
+          <button
+            className={mobileMode === "draw" ? "active" : ""}
+            aria-pressed={mobileMode === "draw"}
+            onClick={() => changeMobileMode("draw")}
+          >
+            <PencilLine size={13} /> ノート作成
+          </button>
+        </div>
         <PencilLine size={13} />
         <span>空白をドラッグして描画</span>
         <i />
         <span>ノートをドラッグして移動</span>
         <i />
         <span>右端をドラッグして長さを変更</span>
+        <button
+          className={`scale-lock-toggle ${scaleLock ? "active" : ""}`}
+          aria-pressed={scaleLock}
+          onClick={() => setScaleLock((locked) => !locked)}
+        >
+          <LockKeyhole size={12} />
+          {pretty(keyName(musicKey))} の音だけ
+        </button>
         <strong>1/4拍グリッド</strong>
       </div>
 
@@ -303,7 +381,7 @@ export function MelodyEditor({
                 {PITCHES.map((note) => (
                   <div
                     key={note}
-                    className={BLACK_NOTES.has(note % 12) ? "black" : ""}
+                    className={`${BLACK_NOTES.has(note % 12) ? "black" : ""} ${scaleLock && !isInKey(note) ? "scale-disabled" : ""}`}
                     style={{ height: ROW_HEIGHT }}
                   >
                     <span>{noteName(note)}</span>
@@ -311,8 +389,12 @@ export function MelodyEditor({
                 ))}
               </div>
               <div
-                className="piano-roll-grid"
-                aria-label="メロディノートを描画するピアノロール"
+                className={`piano-roll-grid ${canEdit ? "draw-mode" : "scroll-mode"}`}
+                aria-label={
+                  canEdit
+                    ? "メロディノートを描画するピアノロール"
+                    : "上下左右にスクロールするピアノロール"
+                }
                 style={{ width: gridWidth, height: gridHeight }}
                 onPointerDown={beginDraw}
                 onPointerMove={continueDraw}
@@ -322,7 +404,7 @@ export function MelodyEditor({
                 {PITCHES.map((note, index) => (
                   <div
                     key={note}
-                    className={`piano-roll-row ${BLACK_NOTES.has(note % 12) ? "black" : ""}`}
+                    className={`piano-roll-row ${BLACK_NOTES.has(note % 12) ? "black" : ""} ${scaleLock && !isInKey(note) ? "scale-disabled" : ""}`}
                     style={{ top: index * ROW_HEIGHT, height: ROW_HEIGHT }}
                   />
                 ))}
@@ -343,7 +425,7 @@ export function MelodyEditor({
                     tabIndex={0}
                     aria-label={`${noteName(note.note)}、${note.startBeat + 1}拍目から${note.durationBeats}拍`}
                     aria-pressed={selectedId === note.id}
-                    className={`piano-roll-note ${selectedId === note.id ? "selected" : ""} ${draft?.id === note.id ? "draft" : ""}`}
+                    className={`piano-roll-note ${selectedId === note.id ? "selected" : ""} ${draft?.id === note.id ? "draft" : ""} ${scaleLock && !isInKey(note.note) ? "out-of-key" : ""}`}
                     style={{
                       left: note.startBeat * BEAT_WIDTH + 2,
                       top: (MAX_NOTE - note.note) * ROW_HEIGHT + 2,
@@ -357,7 +439,10 @@ export function MelodyEditor({
                     onPointerUp={finishNoteInteraction}
                     onPointerCancel={cancelNoteInteraction}
                     onKeyDown={(event) => {
-                      if (event.key === "Delete" || event.key === "Backspace") {
+                      if (
+                        canEdit &&
+                        (event.key === "Delete" || event.key === "Backspace")
+                      ) {
                         event.preventDefault();
                         setSelectedId(note.id);
                         onChange(notes.filter((item) => item.id !== note.id));
