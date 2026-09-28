@@ -6,8 +6,10 @@ export const uid = (): string => crypto.randomUUID();
 export const entry = (
   chord: Chord,
   origin: ChordEntry["origin"] = "manual",
-): ChordEntry => ({ id: uid(), chord, origin });
-export const STORAGE_KEY = "chord-canvas.workspace.v1";
+  beats = 4,
+): ChordEntry => ({ id: uid(), chord, beats, origin });
+export const STORAGE_KEY = "harmotrail.workspace.v1";
+export const LEGACY_STORAGE_KEY = "chord-canvas.workspace.v1";
 export function newSong(sample = false): Song {
   const key: Key = { tonic: "C", mode: "major" };
   const chords = diatonic(key, true);
@@ -59,6 +61,9 @@ export function validSong(value: unknown): value is Song {
           (e) =>
             e &&
             typeof e.id === "string" &&
+            (e.beats === undefined ||
+              (Number.isInteger(e.beats) &&
+                [1, 2, 3, 4, 6, 8].includes(e.beats))) &&
             e.chord &&
             /^[A-G][#b]{0,3}$/.test(e.chord.root) &&
             Object.hasOwn(QUALITIES, e.chord.quality) &&
@@ -85,7 +90,9 @@ interface Workspace {
 }
 function loadWorkspace(): Workspace {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw =
+      localStorage.getItem(STORAGE_KEY) ??
+      localStorage.getItem(LEGACY_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (
@@ -101,6 +108,7 @@ function loadWorkspace(): Workspace {
               ...s,
               chords: s.chords.map((e) => ({
                 ...e,
+                beats: e.beats ?? song.beats,
                 chord: e.chord.functionStrength
                   ? e.chord
                   : withFunction(e.chord, e.chord.analysisKey ?? s.key),
@@ -214,14 +222,14 @@ export function useWorkspace() {
 }
 export function exportSong(song: Song, degrees = false): string {
   return (
-    `${song.title}\nBPM: ${song.bpm} / ${song.beats}拍\n\n` +
+    `${song.title}\nBPM: ${song.bpm}\n\n` +
     song.sections
       .map(
         (section) =>
           `Key: ${section.key.tonic} ${section.key.mode === "major" ? "Major" : "Minor"}\n[${section.name}]\n` +
           section.chords
-            .map(({ chord: c }) =>
-              degrees
+            .map(({ chord: c, beats }) => {
+              const name = degrees
                 ? c.degree +
                   (c.inversion
                     ? `/${QUALITIES[c.quality].steps[c.inversion] + 1}`
@@ -233,8 +241,9 @@ export function exportSong(song: Song, degrees = false): string {
                     : "")
                 : c.root +
                   QUALITIES[c.quality].suffix +
-                  (c.inversion ? "/" + c.bassNote : ""),
-            )
+                  (c.inversion ? "/" + c.bassNote : "");
+              return `${name} [${beats ?? song.beats}拍]`;
+            })
             .join(" | "),
       )
       .join("\n\n")

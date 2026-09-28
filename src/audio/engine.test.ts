@@ -53,6 +53,15 @@ describe("再生タイムライン", () => {
     await vi.advanceTimersByTimeAsync(650);
     expect(report).toHaveBeenLastCalledWith(1, "playing");
   });
+  it("コードごとの拍数で再生位置を通知する", async () => {
+    const report = vi.fn();
+    await engine.play(chords, 60, 4, "block", false, report, [1, 3]);
+    expect(report).toHaveBeenLastCalledWith(0, "playing");
+    await vi.advanceTimersByTimeAsync(1100);
+    expect(report).toHaveBeenLastCalledWith(1, "playing");
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(report).toHaveBeenLastCalledWith(-1, "stopped");
+  });
   it("ループし、停止すると次は先頭から再生する", async () => {
     const report = vi.fn();
     await engine.play(chords, 60, 1, "arpeggio", true, report);

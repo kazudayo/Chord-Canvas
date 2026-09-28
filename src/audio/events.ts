@@ -11,11 +11,13 @@ export interface PlaybackSequence {
   events: NoteEvent[];
   durationBeats: number;
   beatsPerChord: number;
+  chordStartBeats: number[];
   chordCount: number;
   markers: { name: string; beat: number }[];
 }
 export interface PlaybackOptions {
   beats: number;
+  beatDurations?: number[];
   pattern: Pattern;
   velocity?: number;
 }
@@ -40,18 +42,25 @@ export function createPlaybackEvents(
   const beats = Math.max(0.25, options.beats),
     velocity = Math.max(1, Math.min(127, Math.round(options.velocity ?? 85)));
   const events: NoteEvent[] = [];
+  const chordStartBeats: number[] = [];
+  let cursor = 0;
   let previous: number[] | undefined;
   chords.forEach((chord, chordIndex) => {
+    const chordBeats = Math.max(
+      0.25,
+      options.beatDurations?.[chordIndex] ?? beats,
+    );
     const notes = playbackVoicing(chord, previous);
     previous = notes;
-    const start = chordIndex * beats;
+    const start = cursor;
+    chordStartBeats.push(start);
     notes.forEach((note, i) => {
       const offset =
-        options.pattern === "arpeggio" ? (i * beats) / notes.length : 0;
+        options.pattern === "arpeggio" ? (i * chordBeats) / notes.length : 0;
       events.push({
         note,
         startBeat: start + offset,
-        durationBeat: beats - offset,
+        durationBeat: chordBeats - offset,
         velocity,
         chordIndex,
       });
@@ -59,15 +68,17 @@ export function createPlaybackEvents(
     events.push({
       note: notes[0] - 12,
       startBeat: start,
-      durationBeat: beats,
+      durationBeat: chordBeats,
       velocity: Math.max(1, Math.round(velocity * 0.78)),
       chordIndex,
     });
+    cursor += chordBeats;
   });
   return {
     events,
-    durationBeats: chords.length * beats,
+    durationBeats: cursor,
     beatsPerChord: beats,
+    chordStartBeats,
     chordCount: chords.length,
     markers: [],
   };
@@ -78,12 +89,20 @@ export function createSongPlaybackEvents(
 ): PlaybackSequence {
   const sequence = createPlaybackEvents(
     sections.flatMap((s) => s.chords.map((e) => e.chord)),
-    options,
+    {
+      ...options,
+      beatDurations: sections.flatMap((s) =>
+        s.chords.map((e) => e.beats ?? options.beats),
+      ),
+    },
   );
   let beat = 0;
   sequence.markers = sections.map((s) => {
     const marker = { name: s.name, beat };
-    beat += s.chords.length * options.beats;
+    beat += s.chords.reduce(
+      (total, chord) => total + (chord.beats ?? options.beats),
+      0,
+    );
     return marker;
   });
   return sequence;

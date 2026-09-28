@@ -55,6 +55,7 @@ export interface Chord {
 export interface ChordEntry {
   id: string;
   chord: Chord;
+  beats?: number;
   origin?:
     "manual" | "recommendation" | "preset" | "sectionConnection" | "modulation";
 }

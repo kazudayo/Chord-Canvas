@@ -4,7 +4,8 @@ import { AudioEngine } from "../audio/engine";
 import { PianoSampler } from "../audio/PianoSampler";
 import { MidiDevices } from "../midi/devices";
 import { MidiNoteOutput } from "../midi/MidiOutput";
-const KEY = "chord-canvas.sound.v1";
+const KEY = "harmotrail.sound.v1";
+const LEGACY_KEY = "chord-canvas.sound.v1";
 export const DEFAULT_SOUND: AudioSettings = {
   soundSource: "piano",
   selectedMidiOutputId: "",
@@ -32,7 +33,13 @@ export function normalizeSound(
 }
 function load() {
   try {
-    return normalizeSound(JSON.parse(localStorage.getItem(KEY) || "null"));
+    return normalizeSound(
+      JSON.parse(
+        localStorage.getItem(KEY) ??
+          localStorage.getItem(LEGACY_KEY) ??
+          "null",
+      ),
+    );
   } catch {
     return DEFAULT_SOUND;
   }

@@ -18,6 +18,7 @@ const song: Song = {
       chords: [
         {
           id: "c",
+          beats: 4,
           chord: invert(diatonic({ tonic: "C", mode: "major" })[0], 1),
         },
       ],
@@ -31,12 +32,24 @@ describe("保存と書き出し", () => {
     expect(validSong(null)).toBe(false);
     expect(validSong({ ...song, bpm: 0 })).toBe(false);
     expect(validSong({ ...song, sections: [] })).toBe(false);
+    expect(
+      validSong({
+        ...song,
+        sections: [
+          {
+            ...song.sections[0],
+            chords: [{ ...song.sections[0].chords[0], beats: 5 }],
+          },
+        ],
+      }),
+    ).toBe(false);
   });
   it("コード名の書き出しはキーとセクションを含む", () => {
     const result = exportSong(song);
     expect(result).toContain("Key: C Major");
     expect(result).toContain("[Aメロ]");
     expect(result).toContain("C/E");
+    expect(result).toContain("[4拍]");
   });
   it("Degree表記の転回形は和音の構成音の度数を使う", () =>
     expect(exportSong(song, true)).toContain("I/3"));

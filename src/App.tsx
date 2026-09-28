@@ -153,6 +153,7 @@ export default function App() {
   const [scope, setScope] = useState("section");
   const [volume, setVolume] = useState(0.6);
   const [audioLoading, setAudioLoading] = useState(false);
+  const [bpmDraft, setBpmDraft] = useState(String(song.bpm));
   const sound = useSoundEngine();
   const dragId = useRef<string | null>(null);
   const audio = sound.engine;
@@ -166,6 +167,7 @@ export default function App() {
     const timer = setTimeout(() => setToast(""), 3400);
     return () => clearTimeout(timer);
   }, [toast]);
+  useEffect(() => setBpmDraft(String(song.bpm)), [song.id, song.bpm]);
   const notify = (text: string) => setToast(text);
   function updateSong(next: Song) {
     stop();
@@ -176,6 +178,14 @@ export default function App() {
       ...song,
       sections: song.sections.map((s) => (s.id === section.id ? next : s)),
     });
+  }
+  function commitBpm() {
+    const parsed = bpmDraft.trim() ? Number(bpmDraft) : Number.NaN;
+    const bpm = Number.isFinite(parsed)
+      ? Math.max(30, Math.min(240, Math.round(parsed)))
+      : song.bpm;
+    setBpmDraft(String(bpm));
+    if (bpm !== song.bpm) updateSong({ ...song, bpm });
   }
   function chooseSection(s: Section) {
     stop();
@@ -237,9 +247,10 @@ export default function App() {
     chord: Chord,
     origin: "manual" | "recommendation" = "manual",
   ) {
-    const next = entry(chord, origin);
+    const next = entry(chord, origin, song.beats);
     if (editMode === "replace" && selectedIndex >= 0) {
       next.id = section.chords[selectedIndex].id;
+      next.beats = section.chords[selectedIndex].beats ?? song.beats;
       updateSection({
         ...section,
         chords: section.chords.map((e, i) => (i === selectedIndex ? next : e)),
@@ -270,6 +281,14 @@ export default function App() {
     updateSection({ ...section, chords });
     if (id === selectedId)
       setSelectedId(chords[Math.max(0, index - 1)]?.id ?? null);
+  }
+  function changeChordBeats(id: string, beats: number) {
+    updateSection({
+      ...section,
+      chords: section.chords.map((item) =>
+        item.id === id ? { ...item, beats } : item,
+      ),
+    });
   }
   function moveChord(id: string, to: number) {
     const index = section.chords.findIndex((e) => e.id === id);
@@ -307,9 +326,14 @@ export default function App() {
           setPlayState(state);
           setPlayingId(items[index]?.id ?? null);
         },
+        items.map((item) => item.beats ?? song.beats),
       );
-    } catch {
-      notify("再生を開始できませんでした。もう一度再生を押してください。");
+    } catch (error) {
+      notify(
+        error instanceof Error
+          ? `再生を開始できませんでした。${error.message}`
+          : "再生を開始できませんでした。もう一度再生を押してください。",
+      );
     } finally {
       setAudioLoading(false);
     }
@@ -402,7 +426,7 @@ export default function App() {
       name: `転調 · ${pretty(keyName(key))}`,
       key,
       chords: chords.map((c) =>
-        entry(connectionChord(c, section.key, key), "modulation"),
+        entry(connectionChord(c, section.key, key), "modulation", song.beats),
       ),
     };
     const sections = [...song.sections];
@@ -421,7 +445,7 @@ export default function App() {
     const target = song.sections.find((s) => s.id === targetId)!;
     const bridge = chords
       .slice(0, -1)
-      .map((c) => entry(c, "sectionConnection"));
+      .map((c) => entry(c, "sectionConnection", song.beats));
     const sections = song.sections
       .filter((s) => s.id !== targetId)
       .map((s) =>
@@ -429,7 +453,9 @@ export default function App() {
       );
     sections.splice(sections.findIndex((s) => s.id === section.id) + 1, 0, {
       ...target,
-      chords: target.chords.length ? target.chords : [entry(chords.at(-1)!)],
+      chords: target.chords.length
+        ? target.chords
+        : [entry(chords.at(-1)!, "manual", song.beats)],
     });
     updateSong({ ...song, sections });
     setSelectedId(bridge.at(-1)?.id ?? selectedId);
@@ -500,7 +526,7 @@ export default function App() {
             <AudioLines size={23} />
           </span>
           <span>
-            chord<span className="brand-light">canvas</span>
+            Harmo<span className="brand-light">Trail</span>
             <small>コード進行アシスト</small>
           </span>
         </a>
@@ -761,8 +787,12 @@ export default function App() {
             <div className="progression-toolbar">
               <span>
                 {pretty(keyName(section.key))}
-                <i /> {section.chords.length} chords <i /> {song.beats}拍 /
-                chord
+                <i /> {section.chords.length} chords <i /> 合計
+                {section.chords.reduce(
+                  (total, item) => total + (item.beats ?? song.beats),
+                  0,
+                )}
+                拍
               </span>
               <button
                 className={`text-button ${editMode === "replace" ? "accent-text" : ""}`}
@@ -784,7 +814,7 @@ export default function App() {
             )}
             {section.chords.length ? (
               <div className="progression-cards">
-                {section.chords.map(({ id, chord: c }, i) => (
+                {section.chords.map(({ id, chord: c, beats }, i) => (
                   <article
                     key={id}
                     draggable
@@ -820,6 +850,23 @@ export default function App() {
                       <span>{c.degree}</span>
                       <small>{functionShort(c)}</small>
                     </button>
+                    <label className="card-beats">
+                      <span>長さ</span>
+                      <select
+                        aria-label={`${i + 1}番目のコードの拍数`}
+                        value={beats ?? song.beats}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onChange={(e) =>
+                          changeChordBeats(id, Number(e.target.value))
+                        }
+                      >
+                        {[1, 2, 3, 4, 6, 8].map((n) => (
+                          <option key={n} value={n}>
+                            {n}拍
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                     <div className="card-actions">
                       <button
                         aria-label={`${i + 1}番目を左へ移動`}
@@ -1064,7 +1111,9 @@ export default function App() {
                 musicKey={section.key}
                 preview={(chords) => void previewRoute(chords)}
                 apply={(chords, replace) => {
-                  const added = chords.map((c) => entry(c, "preset"));
+                  const added = chords.map((c) =>
+                    entry(c, "preset", song.beats),
+                  );
                   updateSection({
                     ...section,
                     chords: replace ? added : [...section.chords, ...added],
@@ -1170,22 +1219,19 @@ export default function App() {
               type="number"
               min={30}
               max={240}
-              value={song.bpm}
-              onChange={(e) =>
-                updateSong({
-                  ...song,
-                  bpm: Math.max(
-                    30,
-                    Math.min(240, Number(e.target.value) || 90),
-                  ),
-                })
-              }
+              inputMode="numeric"
+              value={bpmDraft}
+              onChange={(e) => setBpmDraft(e.target.value)}
+              onBlur={commitBpm}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+              }}
             />
             <span>BPM</span>
           </label>
           <label className="beats-control">
             <select
-              aria-label="1コードの拍数"
+              aria-label="追加するコードの標準拍数"
               value={song.beats}
               onChange={(e) =>
                 updateSong({ ...song, beats: Number(e.target.value) })
@@ -1197,7 +1243,7 @@ export default function App() {
                 </option>
               ))}
             </select>
-            <span>/ chord</span>
+            <span>追加時</span>
           </label>
           <select
             className="pattern-select"

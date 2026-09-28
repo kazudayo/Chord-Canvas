@@ -99,7 +99,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
             <Music2 size={25} />
           </span>
           <div>
-            <strong>chordcanvas</strong>
+            <strong>HarmoTrail</strong>
             <small>コード進行アシスト</small>
           </div>
         </div>

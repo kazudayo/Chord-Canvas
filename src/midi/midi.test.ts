@@ -82,6 +82,16 @@ describe("共通NoteEvent", () => {
       true,
     );
   });
+  it("コードごとの拍数で開始位置と全体の長さを変える", () => {
+    const s = createPlaybackEvents(chords, {
+      beats: 4,
+      beatDurations: [1, 3],
+      pattern: "block",
+    });
+    expect(s.chordStartBeats).toEqual([0, 1]);
+    expect(s.durationBeats).toBe(4);
+    expect(s.events.find((e) => e.chordIndex === 1)?.startBeat).toBe(1);
+  });
   it("空の進行でも正常", () => {
     expect(
       createPlaybackEvents([], { beats: 4, pattern: "block" }).events,
@@ -89,10 +99,8 @@ describe("共通NoteEvent", () => {
   });
   it("サンプル21個と最寄り音高を選択", () => {
     expect(PIANO_ZONES).toHaveLength(21);
-    expect(PIANO_ZONES[8]).toEqual({
-      midi: 60,
-      url: "/assets/audio/piano/C4.mp3",
-    });
+    expect(PIANO_ZONES[8].midi).toBe(60);
+    expect(PIANO_ZONES[8].url).toMatch(/\/assets\/audio\/piano\/C4\.mp3$/);
     expect(
       nearestSample(
         61,
@@ -137,7 +145,7 @@ describe("標準MIDIファイル", () => {
       id: String(i),
       name,
       key: { tonic: "C", mode: "major" as const },
-      chords: [{ id: String(i), chord: chords[i] }],
+      chords: [{ id: String(i), chord: chords[i], beats: i === 0 ? 1 : 3 }],
     }));
     const seq = createSongPlaybackEvents(sections, {
         beats: 4,
@@ -153,7 +161,7 @@ describe("標準MIDIファイル", () => {
         })),
     ).toEqual([
       { name: "Aメロ", tick: 0 },
-      { name: "サビ", tick: 1920 },
+      { name: "サビ", tick: 480 },
     ]);
     expect(events.filter((e) => e.status === 144).map((e) => e.tick)).toEqual(
       seq.events

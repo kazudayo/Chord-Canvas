@@ -1,7 +1,8 @@
 declare const __AUTH_USER_HASH__: string;
 declare const __AUTH_PASSWORD_HASH__: string;
 
-export const AUTH_SESSION_KEY = "chord-canvas.auth.v1";
+export const AUTH_SESSION_KEY = "harmotrail.auth.v1";
+export const LEGACY_AUTH_SESSION_KEY = "chord-canvas.auth.v1";
 
 export async function sha256(value: string): Promise<string> {
   const data = new TextEncoder().encode(value);
@@ -49,11 +50,15 @@ export async function verifyCredentialHashes(
 }
 
 export function hasAuthSession(storage: Storage = sessionStorage): boolean {
-  return storage.getItem(AUTH_SESSION_KEY) === "authenticated";
+  return (
+    storage.getItem(AUTH_SESSION_KEY) === "authenticated" ||
+    storage.getItem(LEGACY_AUTH_SESSION_KEY) === "authenticated"
+  );
 }
 export function createAuthSession(storage: Storage = sessionStorage): void {
   storage.setItem(AUTH_SESSION_KEY, "authenticated");
 }
 export function clearAuthSession(storage: Storage = sessionStorage): void {
   storage.removeItem(AUTH_SESSION_KEY);
+  storage.removeItem(LEGACY_AUTH_SESSION_KEY);
 }

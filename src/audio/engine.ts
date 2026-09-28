@@ -50,6 +50,7 @@ export class AudioEngine {
         ],
         durationBeats: 1,
         beatsPerChord: 1,
+        chordStartBeats: [0],
         chordCount: 1,
         markers: [],
       },
@@ -78,9 +79,15 @@ export class AudioEngine {
     pattern: Pattern,
     loop: boolean,
     callback: (index: number, state: PlaybackState) => void,
+    beatDurations?: number[],
   ) {
     return this.playSequence(
-      createPlaybackEvents(chords, { beats, pattern, velocity: this.velocity }),
+      createPlaybackEvents(chords, {
+        beats,
+        beatDurations,
+        pattern,
+        velocity: this.velocity,
+      }),
       bpm,
       loop,
       callback,
@@ -143,10 +150,13 @@ export class AudioEngine {
             this.output.noteOn(e.note, e.velocity, now);
       }
       lastTick = now;
-      const index = Math.min(
-        sequence.chordCount - 1,
-        Math.floor(beat / sequence.beatsPerChord),
-      );
+      let index = sequence.chordCount - 1;
+      for (let i = 1; i < sequence.chordStartBeats.length; i++) {
+        if (beat < sequence.chordStartBeats[i]) {
+          index = i - 1;
+          break;
+        }
+      }
       if (index !== this.index) {
         this.index = index;
         callback(index, "playing");

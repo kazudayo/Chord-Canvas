@@ -698,6 +698,27 @@ i.dominant-dot,
   color: var(--tone-color);
   opacity: 0.8;
 }
+.card-beats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 5px 0 6px;
+  color: var(--tone-color);
+  font-size: 8px;
+}
+.card-beats select {
+  height: 25px;
+  min-width: 54px;
+  padding: 0 20px 0 8px;
+  border-color: var(--tone-border);
+  border-radius: 5px;
+  background-color: #ffffff99;
+  background-position: right 6px center;
+  color: var(--tone-color);
+  font-size: 10px;
+  font-weight: 650;
+}
 .card-actions {
   display: flex;
   justify-content: space-between;
@@ -1348,15 +1369,22 @@ i.dominant-dot,
   gap: 4px;
 }
 .bpm-control input {
-  border: 0;
-  background: transparent;
+  border: 1px solid #d8e2ce;
+  border-radius: 8px;
+  background: #fff;
   font-weight: 550;
   font-size: 17px;
-  max-width: 43px;
-  padding: 0;
+  width: 58px;
+  max-width: 58px;
+  height: 34px;
+  padding: 0 5px;
   text-align: center;
   appearance: textfield;
   -moz-appearance: textfield;
+}
+.bpm-control input:focus {
+  border-color: #7d9b6c;
+  box-shadow: 0 0 0 3px #7d9b6c1f;
 }
 .bpm-control input::-webkit-inner-spin-button {
   appearance: none;
@@ -2674,8 +2702,8 @@ i.dominant-dot,
   }
   .bpm-control input {
     font-size: 19px;
-    width: 40px;
-    max-width: 40px;
+    width: 58px;
+    max-width: 58px;
   }
   .bpm-control span {
     font-size: 8px;

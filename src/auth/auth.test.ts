@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   AUTH_SESSION_KEY,
+  LEGACY_AUTH_SESSION_KEY,
   clearAuthSession,
   createAuthSession,
   hasAuthSession,
@@ -24,19 +25,19 @@ function memoryStorage(): Storage {
 
 describe("ログイン認証", () => {
   it("SHA-256で認証情報を照合する", async () => {
-    const userHash = await sha256("chordcanvas");
-    const passwordHash = await sha256("ChordCanvas-2026!");
+    const userHash = await sha256("harmotrail");
+    const passwordHash = await sha256("HarmoTrail-2026!");
     expect(
       await verifyCredentialHashes(
-        " chordcanvas ",
-        "ChordCanvas-2026!",
+        " harmotrail ",
+        "HarmoTrail-2026!",
         userHash,
         passwordHash,
       ),
     ).toBe(true);
     expect(
       await verifyCredentialHashes(
-        "chordcanvas",
+        "harmotrail",
         "wrong-password",
         userHash,
         passwordHash,
@@ -45,7 +46,7 @@ describe("ログイン認証", () => {
     expect(
       await verifyCredentialHashes(
         "someone",
-        "ChordCanvas-2026!",
+        "HarmoTrail-2026!",
         userHash,
         passwordHash,
       ),
@@ -56,6 +57,13 @@ describe("ログイン認証", () => {
     expect(hasAuthSession(storage)).toBe(false);
     createAuthSession(storage);
     expect(storage.getItem(AUTH_SESSION_KEY)).toBe("authenticated");
+    expect(hasAuthSession(storage)).toBe(true);
+    clearAuthSession(storage);
+    expect(hasAuthSession(storage)).toBe(false);
+  });
+  it("旧名称のログイン状態を引き継いで削除できる", () => {
+    const storage = memoryStorage();
+    storage.setItem(LEGACY_AUTH_SESSION_KEY, "authenticated");
     expect(hasAuthSession(storage)).toBe(true);
     clearAuthSession(storage);
     expect(hasAuthSession(storage)).toBe(false);

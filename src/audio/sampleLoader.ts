@@ -1,7 +1,10 @@
 export const PIANO_ZONES = Array.from({ length: 21 }, (_, i) => {
   const midi = 36 + i * 3;
   const name = ["C", "Ds", "Fs", "A"][i % 4] + (Math.floor(midi / 12) - 1);
-  return { midi, url: `/assets/audio/piano/${name}.mp3` };
+  return {
+    midi,
+    url: `${import.meta.env.BASE_URL}assets/audio/piano/${name}.mp3`,
+  };
 });
 export async function loadPianoSamples(
   context: AudioContext,
