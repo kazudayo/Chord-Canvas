@@ -35,6 +35,9 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          CHORD_AUTH_USER_HASH: ${{ secrets.CHORD_AUTH_USER_HASH }}
+          CHORD_AUTH_PASSWORD_HASH: ${{ secrets.CHORD_AUTH_PASSWORD_HASH }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
