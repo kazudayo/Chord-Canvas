@@ -362,6 +362,40 @@ export default function App() {
       setAudioLoading(false);
     }
   }
+  async function previewScaleNotes(notes: number[]) {
+    if (!notes.length) return;
+    stop();
+    setAudioLoading(true);
+    try {
+      audio().prepare();
+      audio().setVolume(volume);
+      const step = notes.length === 1 ? 0.8 : 0.5;
+      await audio().playSequence(
+        {
+          events: notes.map((note, index) => ({
+            note,
+            startBeat: index * step,
+            durationBeat: step * 0.86,
+            velocity: sound.settings.velocity,
+            chordIndex: 0,
+            track: "melody" as const,
+          })),
+          durationBeats: notes.length * step,
+          beatsPerChord: notes.length * step,
+          chordStartBeats: [0],
+          chordCount: 1,
+          markers: [],
+        },
+        120,
+        false,
+        () => {},
+      );
+    } catch {
+      notify("スケール音を試聴できませんでした。音源をご確認ください。");
+    } finally {
+      setAudioLoading(false);
+    }
+  }
   function moveChord(id: string, to: number) {
     const index = section.chords.findIndex((e) => e.id === id);
     if (index < 0 || to < 0 || to >= section.chords.length || index === to)
@@ -1025,6 +1059,8 @@ export default function App() {
               onUseVoicing={useGuitarVoicing}
               onUseVoicings={useGuitarVoicings}
               onPreviewVoicing={(voicing) => void previewGuitarVoicing(voicing)}
+              onPreviewScaleNote={(note) => void previewScaleNotes([note])}
+              onPreviewScale={(notes) => void previewScaleNotes(notes)}
             />
             <div className="bass-line">
               <AudioLines size={15} />

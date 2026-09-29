@@ -1,15 +1,24 @@
-import { intervalNote } from "./notes";
+import { getScaleDefinition, getScaleTones } from "./scales";
 import type { Key, MinorVariant } from "./types";
+
 export const SCALES = {
-  major: [0, 2, 4, 5, 7, 9, 11],
-  natural: [0, 2, 3, 5, 7, 8, 10],
-  harmonic: [0, 2, 3, 5, 7, 8, 11],
-  melodic: [0, 2, 3, 5, 7, 9, 11],
+  major: getScaleDefinition("major").intervals,
+  natural: getScaleDefinition("natural-minor").intervals,
+  harmonic: getScaleDefinition("harmonic-minor").intervals,
+  melodic: getScaleDefinition("melodic-minor").intervals,
 };
+
 export function scale(key: Key, variant: MinorVariant = "natural"): string[] {
-  return SCALES[key.mode === "major" ? "major" : variant].map((offset, index) =>
-    intervalNote(key.tonic, offset, index),
-  );
+  const scaleId =
+    key.mode === "major"
+      ? "major"
+      : variant === "harmonic"
+        ? "harmonic-minor"
+        : variant === "melodic"
+          ? "melodic-minor"
+          : "natural-minor";
+  return getScaleTones(key.tonic, scaleId).map((tone) => tone.note);
 }
+
 export const keyName = (key: Key) =>
   `${key.tonic} ${key.mode === "major" ? "Major" : "Minor"}`;
