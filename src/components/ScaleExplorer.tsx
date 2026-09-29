@@ -1,7 +1,7 @@
 import { KeyRound, Play } from "lucide-react";
 import { useMemo } from "react";
 import { averageFret, midiAt } from "../guitar/fretboard";
-import { GUITAR_STRINGS, STRING_LABELS } from "../guitar/tuning";
+import { STRING_LABELS, TAB_STRINGS } from "../guitar/tuning";
 import type { GuitarStringNumber, GuitarVoicing } from "../guitar/types";
 import { chordName } from "../music/chords";
 import { chromaticName, mod, pitch, pretty } from "../music/notes";
@@ -228,7 +228,7 @@ export function ScaleExplorer({
       <div className="scale-fretboard-shell">
         <div className="scale-string-labels" aria-hidden="true">
           <span>FRET</span>
-          {GUITAR_STRINGS.map((string) => (
+          {TAB_STRINGS.map((string) => (
             <strong key={string}>{STRING_LABELS[string]}</strong>
           ))}
         </div>
@@ -244,7 +244,7 @@ export function ScaleExplorer({
                 {fret}
               </span>
             ))}
-            {GUITAR_STRINGS.flatMap((string) =>
+            {TAB_STRINGS.flatMap((string) =>
               frets.map((fret) => {
                 const midiNote = midiAt(string, fret);
                 const pitchClass = mod(midiNote);
