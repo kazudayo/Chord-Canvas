@@ -68,7 +68,9 @@ import { functionClass, functionShort } from "./music/functions";
 import { connectionChord } from "./music/modulation";
 import { Modal } from "./components/Modal";
 import { Connections, Modulation } from "./components/Connections";
-import { MelodyEditor } from "./components/MelodyEditor";
+import { InstrumentEditor } from "./components/InstrumentEditor";
+import type { GuitarVoicing } from "./guitar/types";
+import { guitarVoicingToNoteEvents } from "./guitar/tab";
 
 type View = "compose" | "connect" | "modulate" | "presets";
 type Dialog =
@@ -165,6 +167,7 @@ export default function App() {
   const [bpmDraft, setBpmDraft] = useState(String(song.bpm));
   const sound = useSoundEngine();
   const dragId = useRef<string | null>(null);
+  const progressionScrollRef = useRef<HTMLDivElement>(null);
   const audio = sound.engine;
   const stop = () => {
     sound.stop();
@@ -176,6 +179,25 @@ export default function App() {
     const timer = setTimeout(() => setToast(""), 3400);
     return () => clearTimeout(timer);
   }, [toast]);
+  useEffect(() => {
+    if (!playingId || playState !== "playing") return;
+    const viewport = progressionScrollRef.current;
+    const card = viewport
+      ? Array.from(
+          viewport.querySelectorAll<HTMLElement>("[data-chord-id]"),
+        ).find((item) => item.dataset.chordId === playingId)
+      : undefined;
+    if (!viewport || !card) return;
+    const start = card.offsetLeft;
+    const end = start + card.offsetWidth;
+    const visibleStart = viewport.scrollLeft + 12;
+    const visibleEnd = viewport.scrollLeft + viewport.clientWidth - 12;
+    if (start >= visibleStart && end <= visibleEnd) return;
+    viewport.scrollTo({
+      left: Math.max(0, start - (viewport.clientWidth - card.offsetWidth) / 2),
+      behavior: "smooth",
+    });
+  }, [playingId, playState, section.id]);
   useEffect(() => setBpmDraft(String(song.bpm)), [song.id, song.bpm]);
   const notify = (text: string) => setToast(text);
   function updateSong(next: Song) {
@@ -280,7 +302,7 @@ export default function App() {
       updateSection({
         ...section,
         chords: section.chords.map((e, i) =>
-          i === selectedIndex ? { ...e, chord } : e,
+          i === selectedIndex ? { ...e, chord, guitarVoicing: undefined } : e,
         ),
       });
   }
@@ -301,6 +323,44 @@ export default function App() {
   }
   function updateMelody(melody: MelodyNote[]) {
     updateSection({ ...section, melody });
+  }
+  function useGuitarVoicing(id: string, guitarVoicing: GuitarVoicing) {
+    updateSection({
+      ...section,
+      chords: section.chords.map((item) =>
+        item.id === id ? { ...item, guitarVoicing } : item,
+      ),
+    });
+    notify("ギターフォームを保存しました");
+  }
+  function useGuitarVoicings(voicings: GuitarVoicing[]) {
+    if (voicings.length !== section.chords.length) return;
+    updateSection({
+      ...section,
+      chords: section.chords.map((item, index) => ({
+        ...item,
+        guitarVoicing: voicings[index],
+      })),
+    });
+    notify("進行全体を弾きやすいフォームへ自動配置しました");
+  }
+  async function previewGuitarVoicing(voicing: GuitarVoicing) {
+    stop();
+    setAudioLoading(true);
+    try {
+      audio().prepare();
+      audio().setVolume(volume);
+      await audio().playSequence(
+        guitarVoicingToNoteEvents(voicing),
+        90,
+        false,
+        () => {},
+      );
+    } catch {
+      notify("ギターフォームを試聴できませんでした。音源をご確認ください。");
+    } finally {
+      setAudioLoading(false);
+    }
   }
   function moveChord(id: string, to: number) {
     const index = section.chords.findIndex((e) => e.id === id);
@@ -511,6 +571,7 @@ export default function App() {
         chords: s.chords.map((e) => ({
           ...e,
           chord: transpose(e.chord, s.key, key),
+          guitarVoicing: undefined,
         })),
       };
     });
@@ -838,10 +899,11 @@ export default function App() {
               </div>
             )}
             {section.chords.length ? (
-              <div className="progression-cards">
+              <div className="progression-cards" ref={progressionScrollRef}>
                 {section.chords.map(({ id, chord: c, beats }, i) => (
                   <article
                     key={id}
+                    data-chord-id={id}
                     draggable
                     className={`progression-card ${functionClass(c)} ${selectedId === id ? "selected" : ""} ${playingId === id ? "is-playing" : ""}`}
                     onDragStart={(e) => {
@@ -950,12 +1012,19 @@ export default function App() {
                 </button>
               </div>
             )}
-            <MelodyEditor
-              key={section.id}
-              notes={section.melody ?? []}
+            <InstrumentEditor
+              entries={section.chords}
+              defaultBeats={song.beats}
               totalBeats={sectionBeats}
               musicKey={section.key}
-              onChange={updateMelody}
+              melody={section.melody ?? []}
+              selectedId={selectedId}
+              playingId={playState === "playing" ? playingId : null}
+              onMelodyChange={updateMelody}
+              onSelect={setSelectedId}
+              onUseVoicing={useGuitarVoicing}
+              onUseVoicings={useGuitarVoicings}
+              onPreviewVoicing={(voicing) => void previewGuitarVoicing(voicing)}
             />
             <div className="bass-line">
               <AudioLines size={15} />

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Chord, ChordEntry, Key, Song } from "../music/types";
 import { withFunction } from "../music/functions";
 import { diatonic, QUALITIES } from "../music/chords";
+import type { GuitarVoicing } from "../guitar/types";
 export const uid = (): string => crypto.randomUUID();
 export const entry = (
   chord: Chord,
@@ -10,6 +11,54 @@ export const entry = (
 ): ChordEntry => ({ id: uid(), chord, beats, origin });
 export const STORAGE_KEY = "harmotrail.workspace.v1";
 export const LEGACY_STORAGE_KEY = "chord-canvas.workspace.v1";
+
+function validGuitarVoicing(value: unknown): value is GuitarVoicing {
+  if (!value || typeof value !== "object") return false;
+  const voicing = value as GuitarVoicing;
+  const strings = voicing.positions?.map((position) => position.string);
+  return (
+    typeof voicing.id === "string" &&
+    Array.isArray(voicing.positions) &&
+    voicing.positions.length === 6 &&
+    new Set(strings).size === 6 &&
+    strings.every((string) => [1, 2, 3, 4, 5, 6].includes(string)) &&
+    voicing.positions.every(
+      (position) =>
+        (position.fret === null ||
+          (Number.isInteger(position.fret) &&
+            position.fret >= 0 &&
+            position.fret <= 24)) &&
+        (position.finger === null ||
+          (Number.isInteger(position.finger) &&
+            position.finger >= 0 &&
+            position.finger <= 4)),
+    ) &&
+    [
+      "open",
+      "barre",
+      "root6",
+      "root5",
+      "jazz",
+      "shell",
+      "drop2",
+      "generated",
+    ].includes(voicing.family) &&
+    ["easy", "normal", "advanced"].includes(voicing.difficulty) &&
+    Number.isInteger(voicing.baseFret) &&
+    voicing.baseFret >= 1 &&
+    typeof voicing.rootInBass === "boolean" &&
+    (voicing.barres === undefined ||
+      (Array.isArray(voicing.barres) &&
+        voicing.barres.every(
+          (barre) =>
+            Number.isInteger(barre.fret) &&
+            barre.fret >= 1 &&
+            [1, 2, 3, 4, 5, 6].includes(barre.fromString) &&
+            [1, 2, 3, 4, 5, 6].includes(barre.toString) &&
+            [1, 2, 3, 4].includes(barre.finger),
+        )))
+  );
+}
 export function newSong(sample = false): Song {
   const key: Key = { tonic: "C", mode: "major" };
   const chords = diatonic(key, true);
@@ -89,6 +138,8 @@ export function validSong(value: unknown): value is Song {
             (e.beats === undefined ||
               (Number.isInteger(e.beats) &&
                 [1, 2, 3, 4, 6, 8].includes(e.beats))) &&
+            (e.guitarVoicing === undefined ||
+              validGuitarVoicing(e.guitarVoicing)) &&
             e.chord &&
             /^[A-G][#b]{0,3}$/.test(e.chord.root) &&
             Object.hasOwn(QUALITIES, e.chord.quality) &&
