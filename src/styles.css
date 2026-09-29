@@ -790,6 +790,18 @@ i.dominant-dot,
 .melody-tools button:disabled {
   opacity: 0.35;
 }
+.melody-tools button.melody-reset {
+  width: auto;
+  padding: 0 8px;
+  gap: 4px;
+  color: #667961;
+  white-space: nowrap;
+}
+.melody-tools button.melody-reset span {
+  color: inherit;
+  font-size: 8px;
+  font-weight: 650;
+}
 .piano-roll-help {
   display: flex;
   align-items: center;
@@ -966,6 +978,24 @@ i.dominant-dot,
 .piano-roll-line.beat {
   background: #bfcabe;
 }
+.piano-roll-playing-range {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  border-left: 2px solid #4f7b4a;
+  background: rgba(92, 133, 82, 0.1);
+  pointer-events: none;
+}
+.piano-roll-playing-range > i {
+  position: absolute;
+  top: 0;
+  left: -4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 0 0 50% 50%;
+  background: #4f7b4a;
+}
 .piano-roll-note {
   position: absolute;
   z-index: 3;
@@ -1074,6 +1104,538 @@ i.dominant-dot,
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+  }
+}
+
+/* Instrument editor / Guitar TAB */
+.instrument-editor {
+  margin-top: 18px;
+}
+.instrument-switch {
+  display: inline-flex;
+  gap: 4px;
+  margin: 0 0 12px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: #f4f7f1;
+}
+.instrument-switch button {
+  min-height: 42px;
+  padding: 9px 17px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.instrument-switch button.active {
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(41, 61, 42, 0.09);
+  color: var(--green-dark);
+}
+.guitar-editor {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+}
+.guitar-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  background: #fbfcfa;
+}
+.guitar-control-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #84917f;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.13em;
+}
+.guitar-style-switch {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid #dce4d8;
+  border-radius: 9px;
+  background: #f0f4ed;
+}
+.guitar-style-switch button {
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #74816f;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.guitar-style-switch button.active {
+  background: #fff;
+  box-shadow: 0 1px 5px rgba(38, 60, 40, 0.1);
+  color: var(--green-dark);
+  font-weight: 700;
+}
+.guitar-position-control select {
+  min-width: 120px;
+  height: 38px;
+  padding: 0 30px 0 11px;
+  border: 1px solid #dce4d8;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+.guitar-auto {
+  margin-left: auto;
+  white-space: nowrap;
+}
+.guitar-score {
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+}
+.guitar-score-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 46px;
+  padding: 10px 17px;
+  border-bottom: 1px solid #e1e7de;
+  color: #40503e;
+}
+.guitar-score-heading strong {
+  font-size: 15px;
+}
+.guitar-score-heading span {
+  color: #879284;
+  font-size: 11px;
+}
+.guitar-score-body {
+  display: flex;
+  min-width: 0;
+  background: #fff;
+}
+.guitar-score-gutter {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 82px;
+  border-right: 1px solid #c9d4c5;
+  background: #f2f6ef;
+  box-shadow: 5px 0 12px rgba(46, 65, 44, 0.07);
+  color: #53644f;
+}
+.guitar-score.staff-only .guitar-score-gutter {
+  height: 224px;
+}
+.guitar-score.tab-only .guitar-score-gutter {
+  height: 270px;
+}
+.score-label {
+  position: absolute;
+  top: 12px;
+  left: 0;
+  width: 100%;
+  color: #84917f;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-align: center;
+}
+.score-label.tab-label {
+  top: 163px;
+}
+.score-clef {
+  position: absolute;
+  top: 55px;
+  left: 16px;
+  font-family: "Times New Roman", serif;
+  font-size: 72px;
+  line-height: 1;
+}
+.score-tab-mark {
+  position: absolute;
+  top: 78px;
+  left: 10px;
+  width: 18px;
+  display: grid;
+  font-family: Georgia, serif;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+}
+.score-string-labels > span {
+  position: absolute;
+  right: 12px;
+  width: 20px;
+  color: #6d7b68;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 16px;
+  text-align: center;
+}
+.guitar-score-scroll {
+  min-width: 0;
+  flex: 1;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.guitar-score-svg {
+  display: block;
+  max-width: none;
+  font-family: "DM Sans", sans-serif;
+}
+.score-staff-line,
+.score-tab-line {
+  stroke: #465044;
+  stroke-width: 1.1;
+  vector-effect: non-scaling-stroke;
+}
+.score-tab-line {
+  stroke: #667262;
+}
+.score-bar-line {
+  stroke: #63715f;
+  stroke-width: 1.2;
+}
+.score-end-line {
+  stroke: #3e4a3c;
+  stroke-width: 3;
+}
+.score-beat-guide {
+  stroke: #cfd8cc;
+  stroke-dasharray: 2 4;
+}
+.score-measure-hit {
+  fill: transparent;
+  stroke: transparent;
+  cursor: pointer;
+}
+.guitar-score-measure:hover .score-measure-hit,
+.guitar-score-measure:focus .score-measure-hit {
+  fill: rgba(82, 118, 73, 0.045);
+  stroke: #9fb39a;
+}
+.guitar-score-measure.selected .score-measure-hit {
+  fill: rgba(82, 118, 73, 0.08);
+  stroke: #567c50;
+  stroke-width: 2;
+}
+.guitar-score-measure.is-playing .score-measure-hit {
+  fill: rgba(79, 123, 74, 0.14);
+  stroke: #4f7b4a;
+  stroke-width: 3;
+}
+.guitar-score-measure:focus {
+  outline: none;
+}
+.score-chord-name {
+  fill: #344333;
+  font-family: Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+.score-beats {
+  fill: #879283;
+  font-size: 11px;
+}
+.score-ledger-line {
+  stroke: #465044;
+  stroke-width: 1.1;
+}
+.score-note {
+  fill: #354432;
+  stroke: #354432;
+  stroke-width: 1.4;
+}
+.score-note.open {
+  fill: #fff;
+  stroke-width: 2;
+}
+.score-note-stem {
+  stroke: #354432;
+  stroke-width: 1.5;
+}
+.score-duration-dot {
+  fill: #354432;
+}
+.score-accidental {
+  fill: #354432;
+  font-family: Georgia, serif;
+  font-size: 16px;
+}
+.score-tab-number-bg {
+  fill: #fff;
+}
+.guitar-score-measure.selected .score-tab-number-bg {
+  fill: #eaf1e7;
+}
+.score-tab-number {
+  fill: #303d2f;
+  font-size: 18px;
+  font-weight: 750;
+}
+.score-finger-number {
+  fill: #6b8066;
+  font-size: 11px;
+  font-weight: 750;
+}
+.guitar-score-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 18px;
+  padding: 12px 17px;
+  border-top: 1px solid #e5eae2;
+  color: #849180;
+  font-size: 11px;
+}
+.guitar-inspector {
+  padding: 20px;
+}
+.guitar-inspector-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.guitar-inspector-heading h3 {
+  margin: 2px 0 1px;
+  color: #303d31;
+  font-family: Georgia, serif;
+  font-size: 36px;
+  font-weight: 500;
+}
+.guitar-inspector-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.shape-switcher {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  min-width: 210px;
+  border: 1px solid #dce4d8;
+  border-radius: 10px;
+  background: #fafcf9;
+}
+.shape-switcher button {
+  width: 42px;
+  height: 42px;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  cursor: pointer;
+}
+.shape-switcher button:disabled {
+  color: #c9d1c6;
+  cursor: default;
+}
+.shape-switcher > span {
+  flex: 1;
+  color: #4b5a49;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.shape-switcher small {
+  display: block;
+  margin-top: 2px;
+  color: #929d8e;
+  font-size: 10px;
+  font-weight: 500;
+}
+.guitar-inspector-grid {
+  display: grid;
+  grid-template-columns: minmax(360px, 470px) minmax(0, 1fr);
+  gap: 28px;
+  padding-top: 18px;
+}
+.guitar-diagram {
+  padding: 12px;
+  border: 1px solid #e0e6dd;
+  border-radius: 12px;
+  background: #fbfcfa;
+}
+.guitar-diagram svg {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+}
+.guitar-diagram.horizontal svg {
+  max-height: none;
+}
+.diagram-string,
+.diagram-fret {
+  stroke: #96a390;
+  stroke-width: 1;
+}
+.diagram-nut {
+  stroke: #465543;
+  stroke-width: 4;
+}
+.diagram-string-name,
+.diagram-base-fret {
+  fill: #7d8979;
+  font-size: 11px;
+}
+.diagram-marker {
+  fill: #42513f;
+  font-size: 15px;
+  font-weight: 700;
+}
+.diagram-dot {
+  fill: var(--green-dark);
+}
+.diagram-finger {
+  fill: #fff;
+  font-size: 11px;
+  font-weight: 750;
+}
+.diagram-barre {
+  stroke: var(--green-dark);
+  stroke-linecap: round;
+  stroke-width: 17;
+}
+.diagram-legend {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  color: #849080;
+  font-size: 11px;
+}
+.guitar-voicing-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.guitar-reason {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-left: 3px solid #9db393;
+  background: #f3f7f0;
+  color: #61705d;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.guitar-inspector-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.guitar-inspector-actions button {
+  min-height: 38px;
+}
+.guitar-empty {
+  display: grid;
+  min-height: 250px;
+  place-content: center;
+  justify-items: center;
+  color: #899584;
+  text-align: center;
+}
+.guitar-empty p {
+  max-width: 300px;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+@media (max-width: 760px) {
+  .instrument-switch {
+    display: flex;
+    width: 100%;
+  }
+  .instrument-switch button {
+    flex: 1;
+    min-height: 44px;
+    padding: 8px 4px;
+    font-size: 10px;
+  }
+  .guitar-controls {
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 13px;
+  }
+  .guitar-controls > div {
+    flex: 1 1 100%;
+  }
+  .guitar-style-switch {
+    display: flex;
+  }
+  .guitar-style-switch button {
+    flex: 1;
+    min-height: 40px;
+  }
+  .guitar-position-control {
+    flex: 1;
+  }
+  .guitar-position-control select {
+    width: 100%;
+    min-height: 44px;
+  }
+  .guitar-auto {
+    min-height: 44px;
+    margin-left: 0;
+  }
+  .guitar-score-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .guitar-score-gutter {
+    flex-basis: 54px;
+  }
+  .score-clef {
+    left: 7px;
+  }
+  .score-tab-mark {
+    left: 5px;
+  }
+  .score-string-labels > span {
+    right: 5px;
+  }
+  .guitar-score-legend {
+    gap: 6px 11px;
+  }
+  .guitar-inspector {
+    padding: 14px;
+  }
+  .guitar-inspector-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .shape-switcher {
+    width: 100%;
+  }
+  .shape-switcher button {
+    min-width: 48px;
+    min-height: 48px;
+  }
+  .guitar-inspector-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .guitar-diagram {
+    width: 100%;
+    max-width: none;
+    margin: 0 auto;
+  }
+  .guitar-inspector-actions button {
+    flex: 1;
+    min-height: 44px;
   }
 }
 .bass-line > span {

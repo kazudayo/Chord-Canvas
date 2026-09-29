@@ -1,3 +1,5 @@
+import type { GuitarVoicing } from "../guitar/types";
+
 export type Mode = "major" | "minor";
 export type MinorVariant = "natural" | "harmonic" | "melodic";
 export interface Key {
@@ -56,6 +58,7 @@ export interface ChordEntry {
   id: string;
   chord: Chord;
   beats?: number;
+  guitarVoicing?: GuitarVoicing;
   origin?:
     "manual" | "recommendation" | "preset" | "sectionConnection" | "modulation";
 }

@@ -1,9 +1,17 @@
-import { Hand, LockKeyhole, Music2, PencilLine, Trash2 } from "lucide-react";
+import {
+  Hand,
+  LockKeyhole,
+  Music2,
+  PencilLine,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import {
   useEffect,
   useMemo,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { keyName, scale } from "../music/keys";
@@ -65,14 +73,19 @@ export function MelodyEditor({
   notes,
   totalBeats,
   musicKey,
+  playheadBeat,
+  playingBeats,
   onChange,
 }: {
   notes: MelodyNote[];
   totalBeats: number;
   musicKey: Key;
+  playheadBeat: number | null;
+  playingBeats?: number;
   onChange: (notes: MelodyNote[]) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const noteRefs = useRef(new Map<string, HTMLDivElement>());
   const drawRef = useRef<{
     anchorBeat: number;
     current: MelodyNote;
@@ -107,6 +120,22 @@ export function MelodyEditor({
   }, []);
 
   useEffect(() => {
+    if (playheadBeat == null) return;
+    const viewport = scrollRef.current;
+    if (!viewport) return;
+    const start = 52 + playheadBeat * BEAT_WIDTH;
+    const end = start + (playingBeats ?? 1) * BEAT_WIDTH;
+    const visibleStart = viewport.scrollLeft + 52;
+    const visibleEnd = viewport.scrollLeft + viewport.clientWidth - 18;
+    if (start >= visibleStart && end <= visibleEnd) return;
+    viewport.scrollTo({
+      left: Math.max(0, start - viewport.clientWidth * 0.3),
+      top: viewport.scrollTop,
+      behavior: "smooth",
+    });
+  }, [playheadBeat, playingBeats]);
+
+  useEffect(() => {
     const query = window.matchMedia("(max-width: 760px)");
     const update = () => setIsMobile(query.matches);
     update();
@@ -118,6 +147,13 @@ export function MelodyEditor({
     if (selectedId && !notes.some((note) => note.id === selectedId))
       setSelectedId(null);
   }, [notes, selectedId]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const selectedNote = noteRefs.current.get(selectedId);
+    if (selectedNote && document.activeElement !== selectedNote)
+      selectedNote.focus({ preventScroll: true });
+  }, [selectedId]);
 
   function sorted(next: MelodyNote[]) {
     return [...next].sort(
@@ -212,6 +248,7 @@ export function MelodyEditor({
     if (!canEdit) return;
     event.preventDefault();
     event.stopPropagation();
+    event.currentTarget.focus({ preventScroll: true });
     const current = { ...note };
     interactionRef.current = {
       mode,
@@ -277,10 +314,36 @@ export function MelodyEditor({
     setMoving(null);
   }
 
+  function removeNote(id: string) {
+    const index = notes.findIndex((note) => note.id === id);
+    if (index < 0) return;
+    const previousId = index > 0 ? notes[index - 1].id : null;
+    onChange(notes.filter((note) => note.id !== id));
+    setSelectedId(previousId);
+  }
+
   function removeSelected() {
-    if (!selectedId) return;
-    onChange(notes.filter((note) => note.id !== selectedId));
+    if (selectedId) removeNote(selectedId);
+  }
+
+  function handleNoteKeyDown(
+    event: ReactKeyboardEvent<HTMLDivElement>,
+    id: string,
+  ) {
+    if (!canEdit || (event.key !== "Delete" && event.key !== "Backspace"))
+      return;
+    event.preventDefault();
+    event.stopPropagation();
+    removeNote(id);
+  }
+
+  function resetNotes() {
+    drawRef.current = null;
+    interactionRef.current = null;
+    setDraft(null);
+    setMoving(null);
     setSelectedId(null);
+    onChange([]);
   }
 
   function changeMobileMode(mode: "scroll" | "draw") {
@@ -319,6 +382,16 @@ export function MelodyEditor({
             onClick={removeSelected}
           >
             <Trash2 size={13} />
+          </button>
+          <button
+            className="melody-reset"
+            aria-label="メロディノートをすべてリセット"
+            title="すべてのノートを削除"
+            disabled={notes.length === 0}
+            onClick={resetNotes}
+          >
+            <RotateCcw size={13} />
+            <span>リセット</span>
           </button>
         </div>
       </div>
@@ -418,9 +491,25 @@ export function MelodyEditor({
                     style={{ left: index * STEP * BEAT_WIDTH }}
                   />
                 ))}
+                {playheadBeat != null && (
+                  <div
+                    className="piano-roll-playing-range"
+                    aria-hidden="true"
+                    style={{
+                      left: playheadBeat * BEAT_WIDTH,
+                      width: (playingBeats ?? 1) * BEAT_WIDTH,
+                    }}
+                  >
+                    <i />
+                  </div>
+                )}
                 {visibleNotes.map((note) => (
                   <div
                     key={note.id}
+                    ref={(element) => {
+                      if (element) noteRefs.current.set(note.id, element);
+                      else noteRefs.current.delete(note.id);
+                    }}
                     role="button"
                     tabIndex={0}
                     aria-label={`${noteName(note.note)}、${note.startBeat + 1}拍目から${note.durationBeats}拍`}
@@ -438,16 +527,7 @@ export function MelodyEditor({
                     onPointerMove={continueNoteInteraction}
                     onPointerUp={finishNoteInteraction}
                     onPointerCancel={cancelNoteInteraction}
-                    onKeyDown={(event) => {
-                      if (
-                        canEdit &&
-                        (event.key === "Delete" || event.key === "Backspace")
-                      ) {
-                        event.preventDefault();
-                        setSelectedId(note.id);
-                        onChange(notes.filter((item) => item.id !== note.id));
-                      }
-                    }}
+                    onKeyDown={(event) => handleNoteKeyDown(event, note.id)}
                   >
                     <span>{noteName(note.note)}</span>
                     <b
