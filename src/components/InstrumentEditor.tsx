@@ -2,6 +2,7 @@ import { Guitar, Music2, Piano } from "lucide-react";
 import { useState } from "react";
 import type { GuitarVoicing } from "../guitar/types";
 import type { ChordEntry, Key, MelodyNote } from "../music/types";
+import { scaleStateForKey, type ScaleExplorerState } from "../music/scales";
 import { GuitarTab } from "./GuitarTab";
 import { GuitarScore } from "./GuitarScore";
 import { MelodyEditor } from "./MelodyEditor";
@@ -19,6 +20,8 @@ export function InstrumentEditor({
   onUseVoicing,
   onUseVoicings,
   onPreviewVoicing,
+  onPreviewScaleNote,
+  onPreviewScale,
 }: {
   entries: ChordEntry[];
   defaultBeats: number;
@@ -32,8 +35,13 @@ export function InstrumentEditor({
   onUseVoicing: (id: string, voicing: GuitarVoicing) => void;
   onUseVoicings: (voicings: GuitarVoicing[]) => void;
   onPreviewVoicing: (voicing: GuitarVoicing) => void;
+  onPreviewScaleNote: (note: number) => void;
+  onPreviewScale: (notes: number[]) => void;
 }) {
   const [mode, setMode] = useState<"roll" | "staff" | "guitar">("roll");
+  const [scaleExplorer, setScaleExplorer] = useState<ScaleExplorerState>(() =>
+    scaleStateForKey(musicKey),
+  );
   const playingIndex = entries.findIndex((entry) => entry.id === playingId);
   const playingStartBeat =
     playingIndex >= 0
@@ -101,12 +109,17 @@ export function InstrumentEditor({
         <GuitarTab
           entries={entries}
           defaultBeats={defaultBeats}
+          musicKey={musicKey}
           selectedId={selectedId}
           playingId={playingId}
+          scaleExplorer={scaleExplorer}
+          onScaleExplorerChange={setScaleExplorer}
           onSelect={onSelect}
           onUseVoicing={onUseVoicing}
           onUseVoicings={onUseVoicings}
           onPreview={onPreviewVoicing}
+          onPreviewScaleNote={onPreviewScaleNote}
+          onPreviewScale={onPreviewScale}
         />
       )}
     </section>

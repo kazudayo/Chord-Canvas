@@ -2,7 +2,8 @@ import { ChevronLeft, ChevronRight, Guitar, Play, Route } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { chordName } from "../music/chords";
 import { pretty } from "../music/notes";
-import type { ChordEntry } from "../music/types";
+import type { ScaleExplorerState } from "../music/scales";
+import type { ChordEntry, Key } from "../music/types";
 import {
   defaultVoicing,
   optimizeProgressionVoicings,
@@ -18,6 +19,7 @@ import type {
 } from "../guitar/types";
 import { GuitarChordDiagram } from "./GuitarChordDiagram";
 import { GuitarScore } from "./GuitarScore";
+import { ScaleExplorer } from "./ScaleExplorer";
 
 const STYLE_LABELS: Record<GuitarVoicingStyle, string> = {
   easy: "Easy",
@@ -39,21 +41,31 @@ const FAMILY_LABELS: Record<GuitarVoicing["family"], string> = {
 export function GuitarTab({
   entries,
   defaultBeats,
+  musicKey,
   selectedId,
   playingId,
+  scaleExplorer,
+  onScaleExplorerChange,
   onSelect,
   onUseVoicing,
   onUseVoicings,
   onPreview,
+  onPreviewScaleNote,
+  onPreviewScale,
 }: {
   entries: ChordEntry[];
   defaultBeats: number;
+  musicKey: Key;
   selectedId: string | null;
   playingId: string | null;
+  scaleExplorer: ScaleExplorerState;
+  onScaleExplorerChange: (state: ScaleExplorerState) => void;
   onSelect: (id: string) => void;
   onUseVoicing: (id: string, voicing: GuitarVoicing) => void;
   onUseVoicings: (voicings: GuitarVoicing[]) => void;
   onPreview: (voicing: GuitarVoicing) => void;
+  onPreviewScaleNote: (note: number) => void;
+  onPreviewScale: (notes: number[]) => void;
 }) {
   const [style, setStyle] = useState<GuitarVoicingStyle>("standard");
   const [position, setPosition] = useState<GuitarPositionPreference>("auto");
@@ -114,9 +126,18 @@ export function GuitarTab({
 
   if (!entries.length) {
     return (
-      <div className="guitar-empty">
-        <Guitar size={28} />
-        <p>コードを追加すると、ここにギターTABと押さえ方を表示します。</p>
+      <div className="guitar-editor">
+        <div className="guitar-empty">
+          <Guitar size={28} />
+          <p>コードを追加すると、ここにギターTABと押さえ方を表示します。</p>
+        </div>
+        <ScaleExplorer
+          state={scaleExplorer}
+          musicKey={musicKey}
+          onChange={onScaleExplorerChange}
+          onPreviewNote={onPreviewScaleNote}
+          onPreviewScale={onPreviewScale}
+        />
       </div>
     );
   }
@@ -238,6 +259,15 @@ export function GuitarTab({
           </div>
         </section>
       )}
+      <ScaleExplorer
+        state={scaleExplorer}
+        musicKey={musicKey}
+        chord={selectedEntry?.chord}
+        voicing={selectedVoicing}
+        onChange={onScaleExplorerChange}
+        onPreviewNote={onPreviewScaleNote}
+        onPreviewScale={onPreviewScale}
+      />
     </div>
   );
 }
