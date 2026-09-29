@@ -19,6 +19,7 @@ export interface PlaybackSequence {
 export interface PlaybackOptions {
   beats: number;
   beatDurations?: number[];
+  octaveShifts?: number[];
   pattern: Pattern;
   rhythm?: RhythmPattern;
   velocity?: number;
@@ -52,8 +53,18 @@ export function createPlaybackEvents(
       0.25,
       options.beatDurations?.[chordIndex] ?? beats,
     );
-    const notes = playbackVoicing(chord, previous);
-    previous = notes;
+    const baseNotes = playbackVoicing(chord, previous);
+    previous = baseNotes;
+    const requestedOctave = Math.max(
+      -3,
+      Math.min(3, Math.round(options.octaveShifts?.[chordIndex] ?? 0)),
+    );
+    let octaveShift = requestedOctave * 12;
+    const lowest = baseNotes[0] - 12;
+    const highest = baseNotes.at(-1) ?? baseNotes[0];
+    while (lowest + octaveShift < 0) octaveShift += 12;
+    while (highest + octaveShift > 127) octaveShift -= 12;
+    const notes = baseNotes.map((note) => note + octaveShift);
     const start = cursor;
     chordStartBeats.push(start);
     notes.forEach((note, i) => {
@@ -98,6 +109,7 @@ export function createSongPlaybackEvents(
       beatDurations: sections.flatMap((s) =>
         s.chords.map((e) => e.beats ?? options.beats),
       ),
+      octaveShifts: sections.flatMap((s) => s.chords.map((e) => e.octave ?? 0)),
     },
   );
   let beat = 0;

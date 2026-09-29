@@ -97,6 +97,40 @@ describe("共通NoteEvent", () => {
     expect(s.durationBeats).toBe(4);
     expect(s.events.find((e) => e.chordIndex === 1)?.startBeat).toBe(1);
   });
+  it("コードごとのオクターブを−3〜＋3で再生イベントへ反映する", () => {
+    const sequence = createPlaybackEvents([chords[0], chords[0]], {
+      beats: 4,
+      pattern: "block",
+      octaveShifts: [-1, 2],
+    });
+    expect(
+      sequence.events
+        .filter((event) => event.chordIndex === 0)
+        .map((event) => event.note),
+    ).toEqual([48, 52, 55, 36]);
+    expect(
+      sequence.events
+        .filter((event) => event.chordIndex === 1)
+        .map((event) => event.note),
+    ).toEqual([84, 88, 91, 72]);
+  });
+  it("ChordEntryのオクターブを曲再生とMIDI共通イベントへ反映する", () => {
+    const sequence = createSongPlaybackEvents(
+      [
+        {
+          id: "octave",
+          name: "Aメロ",
+          key: { tonic: "C", mode: "major" },
+          chords: [{ id: "c", chord: chords[0], beats: 4, octave: 3 }],
+        },
+      ],
+      { beats: 4, pattern: "block" },
+    );
+    expect(sequence.events.map((event) => event.note)).toEqual([
+      84, 96, 100, 103,
+    ]);
+    expect(sequence.events.every((event) => event.note <= 127)).toBe(true);
+  });
   it("空の進行でも正常", () => {
     expect(
       createPlaybackEvents([], { beats: 4, pattern: "block" }).events,

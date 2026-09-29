@@ -79,9 +79,11 @@ export class AudioEngine {
       () => {},
     );
   }
-  async preview(chord: Chord, pattern: Pattern = "block") {
+  async preview(chord: Chord, pattern: Pattern = "block", octave = 0) {
     this.prepare();
-    await this.play([chord], 90, 2, pattern, false, () => {});
+    await this.play([chord], 90, 2, pattern, false, () => {}, undefined, [
+      octave,
+    ]);
   }
   async previewRoute(
     chords: Chord[],
@@ -100,11 +102,13 @@ export class AudioEngine {
     loop: boolean,
     callback: (index: number, state: PlaybackState) => void,
     beatDurations?: number[],
+    octaveShifts?: number[],
   ) {
     return this.playSequence(
       createPlaybackEvents(chords, {
         beats,
         beatDurations,
+        octaveShifts,
         pattern,
         velocity: this.velocity,
       }),

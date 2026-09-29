@@ -58,6 +58,7 @@ export interface ChordEntry {
   id: string;
   chord: Chord;
   beats?: number;
+  octave?: number;
   guitarVoicing?: GuitarVoicing;
   origin?:
     "manual" | "recommendation" | "preset" | "sectionConnection" | "modulation";

@@ -238,12 +238,12 @@ export default function App() {
     });
     notify("キーを変更しました。既存コードの音高は維持しています。");
   }
-  async function preview(chord: Chord) {
+  async function preview(chord: Chord, octave = 0) {
     stop();
     setAudioLoading(true);
     try {
       audio().setVolume(volume);
-      await audio().preview(chord, song.pattern);
+      await audio().preview(chord, song.pattern, octave);
     } catch {
       notify("音声を開始できませんでした。もう一度試聴を押してください。");
     } finally {
@@ -282,6 +282,7 @@ export default function App() {
     if (editMode === "replace" && selectedIndex >= 0) {
       next.id = section.chords[selectedIndex].id;
       next.beats = section.chords[selectedIndex].beats ?? song.beats;
+      next.octave = section.chords[selectedIndex].octave ?? 0;
       updateSection({
         ...section,
         chords: section.chords.map((e, i) => (i === selectedIndex ? next : e)),
@@ -320,6 +321,28 @@ export default function App() {
         item.id === id ? { ...item, beats } : item,
       ),
     });
+  }
+  function changeChordOctave(id: string, octave: number) {
+    const normalized = Math.max(-3, Math.min(3, Math.round(octave)));
+    updateSection({
+      ...section,
+      chords: section.chords.map((item) =>
+        item.id === id ? { ...item, octave: normalized } : item,
+      ),
+    });
+  }
+  function changeSectionOctave(octave: number) {
+    const normalized = Math.max(-3, Math.min(3, Math.round(octave)));
+    updateSection({
+      ...section,
+      chords: section.chords.map((item) => ({
+        ...item,
+        octave: normalized,
+      })),
+    });
+    notify(
+      `${section.name}の全コードを Oct ${normalized > 0 ? "+" : ""}${normalized} に設定しました`,
+    );
   }
   function updateMelody(melody: MelodyNote[]) {
     updateSection({ ...section, melody });
@@ -914,18 +937,40 @@ export default function App() {
                 <i /> {section.chords.length} chords <i /> 合計
                 {sectionBeats}拍
               </span>
-              <button
-                className={`text-button ${editMode === "replace" ? "accent-text" : ""}`}
-                disabled={!selected}
-                onClick={() =>
-                  setEditMode(editMode === "replace" ? "append" : "replace")
-                }
-              >
-                <Repeat2 size={13} />
-                {editMode === "replace"
-                  ? "置換をキャンセル"
-                  : "選択コードを置換"}
-              </button>
+              <div className="progression-toolbar-actions">
+                <label className="bulk-octave">
+                  <select
+                    aria-label="セクション内の全コードのオクターブ"
+                    value=""
+                    disabled={!section.chords.length}
+                    onChange={(event) =>
+                      changeSectionOctave(Number(event.target.value))
+                    }
+                  >
+                    <option value="" disabled>
+                      一括 OCT
+                    </option>
+                    {[-3, -2, -1, 0, 1, 2, 3].map((octave) => (
+                      <option key={octave} value={octave}>
+                        Oct {octave > 0 ? "+" : ""}
+                        {octave}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  className={`text-button ${editMode === "replace" ? "accent-text" : ""}`}
+                  disabled={!selected}
+                  onClick={() =>
+                    setEditMode(editMode === "replace" ? "append" : "replace")
+                  }
+                >
+                  <Repeat2 size={13} />
+                  {editMode === "replace"
+                    ? "置換をキャンセル"
+                    : "選択コードを置換"}
+                </button>
+              </div>
             </div>
             {editMode === "replace" && (
               <div className="replace-banner">
@@ -934,7 +979,7 @@ export default function App() {
             )}
             {section.chords.length ? (
               <div className="progression-cards" ref={progressionScrollRef}>
-                {section.chords.map(({ id, chord: c, beats }, i) => (
+                {section.chords.map(({ id, chord: c, beats, octave }, i) => (
                   <article
                     key={id}
                     data-chord-id={id}
@@ -988,6 +1033,24 @@ export default function App() {
                         ))}
                       </select>
                     </label>
+                    <label className="card-beats card-octave">
+                      <span>Oct</span>
+                      <select
+                        aria-label={`${i + 1}番目のコードのオクターブ`}
+                        value={octave ?? 0}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onChange={(e) =>
+                          changeChordOctave(id, Number(e.target.value))
+                        }
+                      >
+                        {[-3, -2, -1, 0, 1, 2, 3].map((value) => (
+                          <option key={value} value={value}>
+                            {value > 0 ? "+" : ""}
+                            {value}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                     <div className="card-actions">
                       <button
                         aria-label={`${i + 1}番目を左へ移動`}
@@ -998,7 +1061,7 @@ export default function App() {
                       </button>
                       <button
                         aria-label={`${i + 1}番目を試聴`}
-                        onClick={() => void preview(c)}
+                        onClick={() => void preview(c, octave ?? 0)}
                       >
                         <Play size={12} />
                       </button>
@@ -1292,7 +1355,9 @@ export default function App() {
           chord={selected}
           previous={section.chords[selectedIndex - 1]?.chord}
           musicKey={selected?.analysisKey ?? section.key}
-          preview={(c) => void preview(c)}
+          preview={(c) =>
+            void preview(c, section.chords[selectedIndex]?.octave ?? 0)
+          }
           change={changeSelected}
         />
       </main>

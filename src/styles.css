@@ -633,6 +633,23 @@ i.dominant-dot,
 .progression-toolbar .text-button {
   font-size: 8px;
 }
+.progression-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.bulk-octave select {
+  width: 82px;
+  height: 27px;
+  padding: 0 20px 0 8px;
+  border: 1px solid #dce4d7;
+  border-radius: 6px;
+  background-color: #fff;
+  background-position: right 6px center;
+  color: #71816b;
+  font-size: 8px;
+  font-weight: 650;
+}
 .progression-cards {
   display: flex;
   gap: 9px;
@@ -718,6 +735,12 @@ i.dominant-dot,
   color: var(--tone-color);
   font-size: 10px;
   font-weight: 650;
+}
+.card-octave {
+  padding-top: 0;
+}
+.card-octave select {
+  min-width: 54px;
 }
 .card-actions {
   display: flex;
@@ -1818,6 +1841,18 @@ i.dominant-dot,
 }
 
 @media (max-width: 760px) {
+  .progression-toolbar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .progression-toolbar-actions {
+    justify-content: space-between;
+    width: 100%;
+  }
+  .bulk-octave select {
+    width: 96px;
+    min-height: 34px;
+  }
   .instrument-switch {
     display: flex;
     width: 100%;

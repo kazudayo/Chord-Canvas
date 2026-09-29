@@ -138,6 +138,10 @@ export function validSong(value: unknown): value is Song {
             (e.beats === undefined ||
               (Number.isInteger(e.beats) &&
                 [1, 2, 3, 4, 6, 8].includes(e.beats))) &&
+            (e.octave === undefined ||
+              (Number.isInteger(e.octave) &&
+                e.octave >= -3 &&
+                e.octave <= 3)) &&
             (e.guitarVoicing === undefined ||
               validGuitarVoicing(e.guitarVoicing)) &&
             e.chord &&
@@ -187,6 +191,7 @@ function loadWorkspace(): Workspace {
               chords: s.chords.map((e) => ({
                 ...e,
                 beats: e.beats ?? song.beats,
+                octave: e.octave ?? 0,
                 chord: e.chord.functionStrength
                   ? e.chord
                   : withFunction(e.chord, e.chord.analysisKey ?? s.key),
@@ -306,7 +311,7 @@ export function exportSong(song: Song, degrees = false): string {
         (section) =>
           `Key: ${section.key.tonic} ${section.key.mode === "major" ? "Major" : "Minor"}\n[${section.name}]\n` +
           section.chords
-            .map(({ chord: c, beats }) => {
+            .map(({ chord: c, beats, octave }) => {
               const name = degrees
                 ? c.degree +
                   (c.inversion
@@ -320,7 +325,10 @@ export function exportSong(song: Song, degrees = false): string {
                 : c.root +
                   QUALITIES[c.quality].suffix +
                   (c.inversion ? "/" + c.bassNote : "");
-              return `${name} [${beats ?? song.beats}拍]`;
+              const octaveLabel = octave
+                ? ` / Oct ${octave > 0 ? "+" : ""}${octave}`
+                : "";
+              return `${name} [${beats ?? song.beats}拍${octaveLabel}]`;
             })
             .join(" | "),
       )
