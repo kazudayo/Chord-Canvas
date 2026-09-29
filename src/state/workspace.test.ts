@@ -52,6 +52,17 @@ describe("保存と書き出し", () => {
         sections: [
           {
             ...song.sections[0],
+            chords: [{ ...song.sections[0].chords[0], octave: 4 }],
+          },
+        ],
+      }),
+    ).toBe(false);
+    expect(
+      validSong({
+        ...song,
+        sections: [
+          {
+            ...song.sections[0],
             melody: [{ id: "bad", note: 128, startBeat: 0, durationBeats: 1 }],
           },
         ],
@@ -67,4 +78,17 @@ describe("保存と書き出し", () => {
   });
   it("Degree表記の転回形は和音の構成音の度数を使う", () =>
     expect(exportSong(song, true)).toContain("I/3"));
+  it("コードのオクターブを保存・テキスト書き出しできる", () => {
+    const octaveSong = {
+      ...song,
+      sections: [
+        {
+          ...song.sections[0],
+          chords: [{ ...song.sections[0].chords[0], octave: 2 }],
+        },
+      ],
+    };
+    expect(validSong(octaveSong)).toBe(true);
+    expect(exportSong(octaveSong)).toContain("Oct +2");
+  });
 });
