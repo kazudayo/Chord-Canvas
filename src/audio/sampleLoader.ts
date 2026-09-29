@@ -1,9 +1,26 @@
+type HarmoTrailRuntime = typeof globalThis & {
+  __HARMOTRAIL_PIANO_BASE_URL__?: string;
+};
+
+function pianoBaseUrl(): string {
+  return (
+    (globalThis as HarmoTrailRuntime).__HARMOTRAIL_PIANO_BASE_URL__ ??
+    `${import.meta.env.BASE_URL}assets/audio/piano/`
+  );
+}
+
+export function pianoAssetUrl(fileName: string): string {
+  return `${pianoBaseUrl()}${fileName}`;
+}
+
 export const PIANO_ZONES = Array.from({ length: 21 }, (_, i) => {
   const midi = 36 + i * 3;
   const name = ["C", "Ds", "Fs", "A"][i % 4] + (Math.floor(midi / 12) - 1);
   return {
     midi,
-    url: `${import.meta.env.BASE_URL}assets/audio/piano/${name}.mp3`,
+    get url() {
+      return pianoAssetUrl(`${name}.mp3`);
+    },
   };
 });
 export async function loadPianoSamples(

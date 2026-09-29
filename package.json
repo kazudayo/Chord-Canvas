@@ -7,6 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "auth:set": "node scripts/set-auth.mjs",
     "build": "tsc -b && vite build",
+    "build:growi-plugin": "vite build --config growi-plugin-harmotrail/vite.config.ts",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run"
   },

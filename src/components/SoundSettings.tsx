@@ -1,5 +1,6 @@
 import { Play, RefreshCw, OctagonX } from "lucide-react";
 import type { useSoundEngine } from "../state/sound";
+import { pianoAssetUrl } from "../audio/sampleLoader";
 export function SoundSettings({
   sound,
   testNote,
@@ -50,7 +51,7 @@ export function SoundSettings({
             Yamaha C5の録音を使用。初回再生時にローカルサンプルを読み込みます。
           </p>
           <a
-            href="/assets/audio/piano/ATTRIBUTION.md"
+            href={pianoAssetUrl("ATTRIBUTION.md")}
             target="_blank"
             rel="noreferrer"
           >

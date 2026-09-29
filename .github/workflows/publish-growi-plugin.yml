@@ -1,0 +1,51 @@
+name: Publish GROWI plugin
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - "growi-plugin-harmotrail/**"
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/publish-growi-plugin.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: growi-plugin-publish
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Build plugin
+        run: npm run build:growi-plugin
+
+      - name: Publish plugin branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: growi-plugin
+          publish_dir: ./growi-plugin-harmotrail
+          force_orphan: true
