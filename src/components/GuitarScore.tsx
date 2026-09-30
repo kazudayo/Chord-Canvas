@@ -31,10 +31,16 @@ function measureLayouts(entries: ChordEntry[], defaultBeats: number) {
   });
 }
 
-function staffNotes(chord: Chord, staffTop: number, staffGap: number) {
+const DISPLACED_NOTEHEAD_OFFSET = 16;
+
+export function staffNotes(
+  chord: Chord,
+  staffTop: number,
+  staffGap: number,
+) {
   const staffBottom = staffTop + staffGap * 4;
   let previousMidi = 59;
-  return chord.notes.map((note) => {
+  const notes = chord.notes.map((note) => {
     let midi = 60 + pitch(note);
     while (midi <= previousMidi) midi += 12;
     previousMidi = midi;
@@ -44,6 +50,22 @@ function staffNotes(chord: Chord, staffTop: number, staffGap: number) {
     return {
       y: staffBottom - (diatonic - e4) * (staffGap / 2),
       accidental: pretty(note.slice(1)),
+      diatonic,
+    };
+  });
+
+  let displaced = false;
+  return notes.map((note, index) => {
+    const previous = notes[index - 1];
+    if (!previous || note.diatonic - previous.diatonic !== 1) {
+      displaced = false;
+    } else {
+      displaced = !displaced;
+    }
+    return {
+      ...note,
+      // 2度で隣接する音符は、下の音を左、上の音を右に交互配置する。
+      xOffset: displaced ? DISPLACED_NOTEHEAD_OFFSET : 0,
     };
   });
 }
@@ -218,6 +240,10 @@ export function GuitarScore({
               const voicing = voicings?.get(entry.id);
               const noteX = x + width / 2;
               const notes = staffNotes(entry.chord, system.top, system.gap);
+              const rightmostNoteX = Math.max(
+                noteX,
+                ...notes.map((note) => noteX + note.xOffset),
+              );
               const selected = entry.id === selectedId;
               return (
                 <g
@@ -276,44 +302,47 @@ export function GuitarScore({
                   })}
 
                   {display === "staff" &&
-                    notes.flatMap((note, index) => [
-                      ...ledgerLines(
-                        note.y,
-                        system.top,
-                        systemBottom,
-                        system.gap,
-                      ).map((ledgerY) => (
-                        <line
-                          key={`ledger-${index}-${ledgerY}`}
-                          x1={noteX - 17}
-                          x2={noteX + 17}
-                          y1={ledgerY}
-                          y2={ledgerY}
-                          className="score-ledger-line"
-                        />
-                      )),
-                      note.accidental ? (
-                        <text
-                          key={`accidental-${index}`}
-                          x={noteX - 22}
-                          y={note.y + 5}
-                          className="score-accidental"
-                        >
-                          {note.accidental}
-                        </text>
-                      ) : null,
-                      <ellipse
-                        key={`note-${index}`}
-                        cx={noteX}
-                        cy={note.y}
-                        rx="9"
-                        ry="6"
-                        transform={`rotate(-16 ${noteX} ${note.y})`}
-                        className={
-                          beats >= 2 ? "score-note open" : "score-note"
-                        }
-                      />,
-                    ])}
+                    notes.flatMap((note, index) => {
+                      const headX = noteX + note.xOffset;
+                      return [
+                        ...ledgerLines(
+                          note.y,
+                          system.top,
+                          systemBottom,
+                          system.gap,
+                        ).map((ledgerY) => (
+                          <line
+                            key={`ledger-${index}-${ledgerY}`}
+                            x1={headX - 17}
+                            x2={headX + 17}
+                            y1={ledgerY}
+                            y2={ledgerY}
+                            className="score-ledger-line"
+                          />
+                        )),
+                        note.accidental ? (
+                          <text
+                            key={`accidental-${index}`}
+                            x={noteX - 22}
+                            y={note.y + 5}
+                            className="score-accidental"
+                          >
+                            {note.accidental}
+                          </text>
+                        ) : null,
+                        <ellipse
+                          key={`note-${index}`}
+                          cx={headX}
+                          cy={note.y}
+                          rx="9"
+                          ry="6"
+                          transform={`rotate(-16 ${headX} ${note.y})`}
+                          className={
+                            beats >= 2 ? "score-note open" : "score-note"
+                          }
+                        />,
+                      ];
+                    })}
                   {display === "staff" && beats < 4 && notes.length > 0 && (
                     <line
                       x1={noteX + 8}
@@ -325,7 +354,7 @@ export function GuitarScore({
                   )}
                   {display === "staff" && beats === 3 && (
                     <circle
-                      cx={noteX + 17}
+                      cx={rightmostNoteX + 17}
                       cy={notes.at(-1)?.y ?? systemBottom}
                       r="2.6"
                       className="score-duration-dot"
