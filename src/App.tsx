@@ -950,7 +950,7 @@ export default function App() {
                     <option value="" disabled>
                       一括 OCT
                     </option>
-                    {[-3, -2, -1, 0, 1, 2, 3].map((octave) => (
+                    {[3, 2, 1, 0, -1, -2, -3].map((octave) => (
                       <option key={octave} value={octave}>
                         Oct {octave > 0 ? "+" : ""}
                         {octave}
@@ -1043,7 +1043,7 @@ export default function App() {
                           changeChordOctave(id, Number(e.target.value))
                         }
                       >
-                        {[-3, -2, -1, 0, 1, 2, 3].map((value) => (
+                        {[3, 2, 1, 0, -1, -2, -3].map((value) => (
                           <option key={value} value={value}>
                             {value > 0 ? "+" : ""}
                             {value}
